@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/mundanelizard/envi/cli"
+	"github.com/mundanelizard/envi/internal/workspace"
 	"log"
 	"os"
 	"path"
@@ -54,6 +55,36 @@ func NewInitCommand() *cli.Command {
 }
 
 func handleCommit(values *cli.ActionArgs, args []string) {
+	baseDir, err := os.Getwd()
+
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+
+	enviDir := path.Join(baseDir, ".envi")
+	dbDir := path.Join(enviDir, "objects")
+
+	ws := workspace.New(enviDir)
+	db := database.New(dbDir)
+
+	for _, file := range ws.ListFiles() {
+		data, err := ws.ReadFile(file)
+		if err != nil {
+			log.Fatalln(err)
+			return
+		}
+
+		blob := blob.New(data)
+
+		err = db.Store(blob)
+
+		if err != nil {
+			log.Fatalln(err)
+			return
+		}
+	}
+
 	fmt.Println("Handling commit")
 	fmt.Println(values)
 	fmt.Println("args")
@@ -64,6 +95,7 @@ func handleInit(_ *cli.ActionArgs, args []string) {
 
 	if err != nil {
 		log.Fatalln(err)
+		return
 	}
 
 	if len(args) == 1 {
