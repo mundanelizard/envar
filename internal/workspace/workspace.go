@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"bytes"
 	"os"
 )
 
@@ -34,6 +35,10 @@ func (ws *workspace) ListFiles() ([]os.DirEntry, error) {
 	}
 
 	return filteredNames, nil
+}
+
+func (ws *workspace) ReadFile(file os.DirEntry) (*bytes.Buffer, error) {
+	return &bytes.Buffer{}, nil
 }
 
 func has(list []string, key string) bool {

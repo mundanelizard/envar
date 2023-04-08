@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/mundanelizard/envi/internal/blob"
+	"github.com/mundanelizard/envi/internal/database"
 	"github.com/mundanelizard/envi/internal/workspace"
 	"github.com/mundanelizard/envi/pkg/cli"
 	"log"
@@ -68,16 +70,18 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 	ws := workspace.New(enviDir)
 	db := database.New(dbDir)
 
-	for _, file := range ws.ListFiles() {
+	files, err := ws.ListFiles()
+
+	for _, file := range files {
 		data, err := ws.ReadFile(file)
 		if err != nil {
 			log.Fatalln(err)
 			return
 		}
 
-		blob := blob.New(data)
+		b := blob.New(data)
 
-		err = db.Store(blob)
+		err = db.Store(b)
 
 		if err != nil {
 			log.Fatalln(err)
