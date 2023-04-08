@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/mundanelizard/envi/cli"
 	"github.com/mundanelizard/envi/internal/workspace"
+	"github.com/mundanelizard/envi/pkg/cli"
 	"log"
 	"os"
 	"path"
