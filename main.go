@@ -6,10 +6,12 @@ import (
 	"github.com/mundanelizard/envi/internal/database"
 	"github.com/mundanelizard/envi/internal/workspace"
 	"github.com/mundanelizard/envi/pkg/cli"
-	"log"
+	log "github.com/mundanelizard/envi/pkg/logger"
 	"os"
 	"path"
 )
+
+var logger = log.New(os.Stdout, log.Info)
 
 func main() {
 	var app = cli.New("jit")
@@ -60,7 +62,7 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 	baseDir, err := os.Getwd()
 
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatal(err)
 		return
 	}
 
@@ -75,7 +77,7 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 	for _, file := range files {
 		data, err := ws.ReadFile(file)
 		if err != nil {
-			log.Fatalln(err)
+			logger.Fatal(err)
 			return
 		}
 
@@ -84,7 +86,7 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 		err = db.Store(b)
 
 		if err != nil {
-			log.Fatalln(err)
+			logger.Fatal(err)
 			return
 		}
 	}
@@ -98,7 +100,7 @@ func handleInit(_ *cli.ActionArgs, args []string) {
 	wd, err := os.Getwd()
 
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatal(err)
 		return
 	}
 
@@ -112,7 +114,7 @@ func handleInit(_ *cli.ActionArgs, args []string) {
 	for _, dir := range dirs {
 		err = os.MkdirAll(path.Join(wd, dir), 0755)
 		if err != nil {
-			log.Fatalln(err)
+			logger.Fatal(err)
 		}
 	}
 

@@ -2,6 +2,8 @@ package cli
 
 import "fmt"
 
+type ActionFunc func(command *ActionArgs, args []string)
+
 func New(name string) *Command {
 	// default handler
 	fn := func(command *ActionArgs, args []string) {
@@ -12,10 +14,14 @@ func New(name string) *Command {
 	return NewWithAction(name, fn)
 }
 
-func NewWithAction(name string, action func(command *ActionArgs, args []string)) *Command {
+func NewWithAction(name string, action ActionFunc) *Command {
 	return &Command{
-		Name:   name,
 		Action: action,
+		Name:   name,
 		root:   true,
 	}
+}
+
+func (cmd *Command) SetAction(action ActionFunc) {
+	cmd.Action = action
 }
