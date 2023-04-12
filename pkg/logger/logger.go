@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"io"
+	"os"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -57,8 +58,9 @@ func (l *Logger) Error(err error, meta ...any) (int, error) {
 	return l.print(Error, err.Error(), meta...)
 }
 
-func (l *Logger) Fatal(err error, meta ...any) (int, error) {
-	return l.print(Fatal, err.Error(), meta...)
+func (l *Logger) Fatal(err error, meta ...any) {
+	l.print(Fatal, err.Error(), meta...)
+	os.Exit(1)
 }
 
 func (l *Logger) print(level Level, message string, meta ...any) (int, error) {
@@ -68,6 +70,7 @@ func (l *Logger) print(level Level, message string, meta ...any) (int, error) {
 
 	t := time.Now().UTC().Format(time.RFC3339)
 
+	// todo => switch up with a strings.Builder
 	var line string
 
 	if level == Error || level == Fatal {

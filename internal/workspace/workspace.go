@@ -1,44 +1,47 @@
+// Package workspace /
+// Workspace class is responsible for the files in the working tree - the files edited.
 package workspace
 
 import (
-	"bytes"
 	"os"
 )
 
-type workspace struct {
+type Workspace struct {
 	wd string
 }
 
+// paths to ignore when listing files in the working tree
 var ignore = []string{".", "..", ".envi", ".git"}
 
-func New(wd string) *workspace {
-	return &workspace{
+func New(wd string) *Workspace {
+	return &Workspace{
 		wd: wd,
 	}
 }
 
-func (ws *workspace) ListFiles() ([]os.DirEntry, error) {
+func (ws *Workspace) ListFiles() ([]string, error) {
 	dirEntries, err := os.ReadDir(ws.wd)
 
 	if err != nil {
 		return nil, err
 	}
 
-	filteredNames := make([]os.DirEntry, 0)
+	paths := make([]string, 0)
 
 	for _, de := range dirEntries {
-		if has(ignore, de.Name()) {
+		// todo => optimise this by using a map for the check.
+		if de.IsDir() || has(ignore, de.Name()) {
 			continue
 		}
 
-		filteredNames = append(filteredNames, de)
+		paths = append(paths, de.Name())
 	}
 
-	return filteredNames, nil
+	return paths, nil
 }
 
-func (ws *workspace) ReadFile(file os.DirEntry) (*bytes.Buffer, error) {
-	return &bytes.Buffer{}, nil
+func (ws *Workspace) ReadFile(path string) ([]byte, error) {
+	return os.ReadFile(path)
 }
 
 func has(list []string, key string) bool {
