@@ -74,6 +74,7 @@ func (db *Db) writeFile(path string, buf bytes.Buffer) error {
 	}
 
 	_, err = file.Write(buf.Bytes())
+	file.Close()
 	if err != nil {
 		return err
 	}
