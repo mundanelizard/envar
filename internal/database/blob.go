@@ -1,10 +1,6 @@
 // Package blob /
 // Blob represents a file contents
-package blob
-
-const (
-	TYPE = "blob"
-)
+package database
 
 type Blob struct {
 	data  string
@@ -12,7 +8,7 @@ type Blob struct {
 	id    string
 }
 
-func New(data []byte) *Blob {
+func NewBlob(data []byte) *Blob {
 	str := string(data)
 	return &Blob{
 		data:  str,
@@ -39,7 +35,7 @@ func (blob *Blob) Id() string {
 }
 
 func (blob *Blob) Type() string {
-	return TYPE
+	return "blob"
 }
 
 /*

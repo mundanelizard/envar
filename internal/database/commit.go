@@ -1,28 +1,25 @@
 // Package commit
 // Represents a commit in envi history.
-package commit
+package database
 
 import (
 	"fmt"
-	"github.com/mundanelizard/envi/internal/author"
-)
-
-const (
-	TYPE = "commit"
 )
 
 type Commit struct {
 	id      string
 	treeId  string
-	aut     *author.Author
+	aut     *Author
 	message string
+	parent  string
 }
 
-func New(treeId string, aut *author.Author, message string) *Commit {
+func NewCommit(parent, treeId string, aut *Author, message string) *Commit {
 	return &Commit{
 		treeId:  treeId,
 		aut:     aut,
 		message: message,
+		parent:  parent,
 	}
 }
 
@@ -36,9 +33,16 @@ func (c *Commit) SetId(id string) {
 
 func (c *Commit) String() string {
 	a := c.aut.String()
-	return fmt.Sprintf("tree %s\nauthor %s\ncommitter %s\n\n%s", c.treeId, a, a, c.message)
+
+	var parent string
+
+	if len(c.parent) != 0 {
+		parent = fmt.Sprintf("parent %s\n", c.parent)
+	}
+
+	return fmt.Sprintf("tree %s\n%sauthor %s\ncommitter %s\n\n%s", c.treeId, parent, a, a, c.message)
 }
 
 func (c *Commit) Type() string {
-	return TYPE
+	return "commit"
 }

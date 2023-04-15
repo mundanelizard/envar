@@ -25,6 +25,12 @@ type Storable interface {
 	Type() string
 }
 
+func New(dir string) *Db {
+	return &Db{
+		dir: dir,
+	}
+}
+
 func (db *Db) Store(blob Storable) error {
 	data := blob.String()
 	size := len(data)
@@ -43,6 +49,14 @@ func (db *Db) Write(blob Storable, content []byte) error {
 	dirName := path.Join(db.dir, id[0:2])
 	objPath := path.Join(dirName, id[2:])
 
+	exist, err := db.exists(objPath)
+	switch {
+	case err != nil:
+		return err
+	case exist:
+		return nil
+	}
+
 	buf, err := compress(content)
 	if err != nil {
 		return err
@@ -54,13 +68,11 @@ func (db *Db) Write(blob Storable, content []byte) error {
 func (db *Db) writeFile(path string, buf bytes.Buffer) error {
 	dir := filepath.Dir(path)
 	exist, err := db.exists(dir)
-
-	if err != nil {
+	switch {
+	case err != nil:
 		return err
-	}
-
-	if !exist {
-		err := os.MkdirAll(dir, 0755)
+	case !exist:
+		err = os.MkdirAll(dir, 0755)
 		if err != nil {
 			return err
 		}
@@ -74,7 +86,11 @@ func (db *Db) writeFile(path string, buf bytes.Buffer) error {
 	}
 
 	_, err = file.Write(buf.Bytes())
-	file.Close()
+	if err != nil {
+		return err
+	}
+
+	err = file.Close()
 	if err != nil {
 		return err
 	}
@@ -96,12 +112,6 @@ func (db *Db) exists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
-}
-
-func New(dir string) *Db {
-	return &Db{
-		dir: dir,
-	}
 }
 
 func hash(bv []byte) string {

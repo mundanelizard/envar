@@ -1,4 +1,4 @@
-package author
+package database
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ type Author struct {
 	timestamp time.Time
 }
 
-func New(name, email string, timestamp time.Time) *Author {
+func NewAuthor(name, email string, timestamp time.Time) *Author {
 	return &Author{
 		name:      name,
 		email:     email,

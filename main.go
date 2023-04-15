@@ -2,12 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/mundanelizard/envi/internal/author"
-	"github.com/mundanelizard/envi/internal/blob"
-	"github.com/mundanelizard/envi/internal/commit"
 	"github.com/mundanelizard/envi/internal/database"
 	"github.com/mundanelizard/envi/internal/entry"
-	"github.com/mundanelizard/envi/internal/tree"
+	"github.com/mundanelizard/envi/internal/refs"
 	"github.com/mundanelizard/envi/internal/workspace"
 	"github.com/mundanelizard/envi/pkg/cli"
 	log "github.com/mundanelizard/envi/pkg/logger"
@@ -94,22 +91,23 @@ func NewInitCommand() *cli.Command {
 func handleCommit(values *cli.ActionArgs, args []string) {
 	ws := workspace.New(wd)
 	db := database.New(od)
+	rs := refs.New(ed)
 
-	files, err := ws.ListFiles()
+	paths, err := ws.ListFiles()
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	entries := make([]*entry.Entry, 0, len(files))
+	entries := make([]database.Enterable, 0, len(paths))
 
-	for _, path := range files {
-		data, err := ws.ReadFile(path)
+	for _, p := range paths {
+		data, err := ws.ReadFile(p)
 		if err != nil {
 			logger.Fatal(err)
 			return
 		}
 
-		b := blob.New(data)
+		b := database.NewBlob(data)
 
 		err = db.Store(b)
 		if err != nil {
@@ -117,25 +115,42 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 			return
 		}
 
-		e := entry.New(path, b.Id())
+		stat, err := ws.Stat(p)
+		if err != nil {
+			logger.Fatal(err)
+			return
+		}
+
+		e := entry.New(p, b.Id(), stat)
 		entries = append(entries, e)
 	}
 
-	t := tree.New(entries)
-	err = db.Store(t)
+	t := database.BuildTree(entries)
+
+	t.Traverse(func(t *database.Tree) {
+		//fmt.Println("Storing Tree ", t.Name())
+		db.Store(t)
+	})
+
+	aut := database.NewAuthor(os.Getenv("ENVI_AUTHOR_NAME"), os.Getenv("ENVI_AUTHOR_EMAIL"), time.Now())
+	message, _ := values.GetString("message")
+
+	pid, err := rs.ReadHead()
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	aut := author.New(os.Getenv("ENVI_AUTHOR_NAME"), os.Getenv("ENVI_AUTHOR_EMAIL"), time.Now())
-	message, _ := values.GetString("message")
-
-	com := commit.New(t.Id(), aut, message)
+	com := database.NewCommit(pid, t.Id(), aut, message)
 	db.Store(com)
+	rs.UpdateHead(com.Id())
 
-	os.WriteFile(path.Join(ed, "HEAD"), []byte(com.Id()), 0755)
+	var meta string
 
-	fmt.Printf("[(root-commit) %s] %s\n", com.Id(), strings.Split(message, "\n")[0])
+	if len(pid) == 0 {
+		meta = "(root-commit)"
+	}
+
+	fmt.Printf("[%s %s] %s\n", meta, com.Id(), strings.Split(message, "\n")[0])
 }
 
 func handleInit(_ *cli.ActionArgs, args []string) {
@@ -153,5 +168,5 @@ func handleInit(_ *cli.ActionArgs, args []string) {
 		}
 	}
 
-	logger.Info(fmt.Sprintf("Initialised empty envi directory in %s", wd))
+	fmt.Printf("Initialised empty envi directory in %s", wd)
 }

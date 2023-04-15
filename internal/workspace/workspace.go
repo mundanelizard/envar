@@ -4,44 +4,74 @@ package workspace
 
 import (
 	"os"
+	"path"
+	"path/filepath"
+	"sort"
 )
 
 type Workspace struct {
-	wd string
+	dir string
 }
 
 // paths to ignore when listing files in the working tree
-var ignore = []string{".", "..", ".envi", ".git"}
+var ignore = []string{".", "..", ".envi", ".git", ".idea"}
 
-func New(wd string) *Workspace {
+func New(dir string) *Workspace {
 	return &Workspace{
-		wd: wd,
+		dir: dir,
 	}
 }
 
 func (ws *Workspace) ListFiles() ([]string, error) {
-	dirEntries, err := os.ReadDir(ws.wd)
+	return ws.listFiles(ws.dir)
+}
 
+func (ws *Workspace) listFiles(dir string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
 
-	paths := make([]string, 0)
-
-	for _, de := range dirEntries {
-		// todo => optimise this by using a map for the check.
-		if de.IsDir() || has(ignore, de.Name()) {
+	var paths []string
+	for _, entry := range entries {
+		if has(ignore, entry.Name()) {
 			continue
 		}
 
-		paths = append(paths, de.Name())
+		newDir := path.Join(dir, entry.Name())
+
+		if !entry.IsDir() {
+			// extracting the path relative to the workspace directory
+			p, _ := filepath.Rel(ws.dir, newDir)
+			paths = append(paths, p)
+			continue
+		}
+
+		subPaths, err := ws.listFiles(newDir)
+		if err != nil {
+			return nil, err
+		}
+
+		paths = append(paths, subPaths...)
 	}
+
+	// sorting an array of strings
+	sort.Strings(paths)
 
 	return paths, nil
 }
 
 func (ws *Workspace) ReadFile(path string) ([]byte, error) {
 	return os.ReadFile(path)
+}
+
+func (ws *Workspace) Stat(name string) (os.FileInfo, error) {
+	stat, err := os.Stat(path.Join(ws.dir, name))
+	if err != nil {
+		return nil, err
+	}
+
+	return stat, err
 }
 
 func has(list []string, key string) bool {
