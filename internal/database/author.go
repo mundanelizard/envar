@@ -13,6 +13,14 @@ type Author struct {
 }
 
 func NewAuthor(name, email string, timestamp time.Time) *Author {
+	if len(name) == 0 {
+		name = "John Doe"
+	}
+
+	if len(email) == 0 {
+		email = "john.doe@envi.org"
+	}
+
 	return &Author{
 		name:      name,
 		email:     email,

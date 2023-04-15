@@ -94,6 +94,12 @@ func (t *Tree) Mode() string {
 	return ModeDir
 }
 
+// implementing Enterable and database.Storable
+
+func (t *Tree) Id() string {
+	return t.id
+}
+
 // implementing methods for database.Storable
 
 func (t *Tree) String() string {
@@ -112,10 +118,6 @@ func (t *Tree) String() string {
 
 func (t *Tree) SetId(id string) {
 	t.id = id
-}
-
-func (t *Tree) Id() string {
-	return t.id
 }
 
 func (t *Tree) Type() string {

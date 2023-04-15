@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/mundanelizard/envi/internal/database"
 	"github.com/mundanelizard/envi/internal/entry"
+	"github.com/mundanelizard/envi/internal/index"
 	"github.com/mundanelizard/envi/internal/refs"
 	"github.com/mundanelizard/envi/internal/workspace"
 	"github.com/mundanelizard/envi/pkg/cli"
@@ -48,6 +50,7 @@ func main() {
 
 	app.AddCommand(NewCommitCommand())
 	app.AddCommand(NewInitCommand())
+	app.AddCommand(NewAddCommand())
 
 	app.Execute(os.Args)
 }
@@ -86,6 +89,43 @@ func NewInitCommand() *cli.Command {
 		},
 		Action: handleInit,
 	}
+}
+
+func NewAddCommand() *cli.Command {
+	return &cli.Command{
+		Name:   "add",
+		Flags:  []cli.Flagger{},
+		Action: handleAdd,
+	}
+}
+
+func handleAdd(values *cli.ActionArgs, args []string) {
+	if len(args) == 0 {
+		logger.Fatal(errors.New("args: invalid commit argument length"))
+	}
+
+	ws := workspace.New(wd)
+	db := database.New(od)
+	ix := index.New(path.Join(ed, "index"))
+
+	p := args[0]
+	data, err := ws.ReadFile(p)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+
+	stat, err := ws.Stat(p)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+
+	blob := database.NewBlob(data)
+	db.Store(blob)
+	ix.Add(p, blob.Id(), stat)
+
+	ix.WriteUpdates()
 }
 
 func handleCommit(values *cli.ActionArgs, args []string) {
@@ -128,7 +168,6 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 	t := database.BuildTree(entries)
 
 	t.Traverse(func(t *database.Tree) {
-		//fmt.Println("Storing Tree ", t.Name())
 		db.Store(t)
 	})
 
@@ -144,8 +183,7 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 	db.Store(com)
 	rs.UpdateHead(com.Id())
 
-	var meta string
-
+	meta := ""
 	if len(pid) == 0 {
 		meta = "(root-commit)"
 	}
