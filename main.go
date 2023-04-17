@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"github.com/mundanelizard/envi/internal/database"
 	"github.com/mundanelizard/envi/internal/entry"
@@ -12,6 +11,7 @@ import (
 	log "github.com/mundanelizard/envi/pkg/logger"
 	"os"
 	"path"
+	"sort"
 	"strings"
 	"time"
 )
@@ -100,32 +100,52 @@ func NewAddCommand() *cli.Command {
 }
 
 func handleAdd(values *cli.ActionArgs, args []string) {
-	if len(args) == 0 {
-		logger.Fatal(errors.New("args: invalid commit argument length"))
-	}
-
 	ws := workspace.New(wd)
 	db := database.New(od)
 	ix := index.New(path.Join(ed, "index"))
 
-	p := args[0]
-	data, err := ws.ReadFile(p)
+	var paths []string
+
+	if len(args) != 0 {
+		sort.Strings(args)
+		paths = args
+	} else {
+		files, err := ws.ListFiles()
+		if err != nil {
+			logger.Fatal(err)
+			return
+		}
+
+		paths = files
+	}
+
+	for _, p := range paths {
+		data, err := ws.ReadFile(p)
+		if err != nil {
+			logger.Fatal(err)
+			return
+		}
+
+		stat, err := ws.Stat(p)
+		if err != nil {
+			logger.Fatal(err)
+			return
+		}
+
+		blob := database.NewBlob(data)
+		err = db.Store(blob)
+		if err != nil {
+			logger.Fatal(err)
+			return
+		}
+		ix.Add(p, blob.Id(), stat)
+	}
+
+	err := ix.WriteUpdates()
 	if err != nil {
 		logger.Fatal(err)
 		return
 	}
-
-	stat, err := ws.Stat(p)
-	if err != nil {
-		logger.Fatal(err)
-		return
-	}
-
-	blob := database.NewBlob(data)
-	db.Store(blob)
-	ix.Add(p, blob.Id(), stat)
-
-	ix.WriteUpdates()
 }
 
 func handleCommit(values *cli.ActionArgs, args []string) {
