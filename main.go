@@ -206,9 +206,19 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 		logger.Fatal(err)
 	}
 
+	// todo => check if tree id is the lastest tree id and skip the creation
+	currentCommitId, err := rs.ReadHead()
+	commit, err := database.ReadCommit(currentCommitId)
+
+	if commit.treeId == t.Id() {
+		fmt.Println("")
+		return
+	}
+
 	com := database.NewCommit(pid, t.Id(), aut, message)
 	db.Store(com)
 	rs.UpdateHead(com.Id())
+	rs.UpdateHistory(com.Id())
 
 	meta := ""
 	if len(pid) == 0 {
