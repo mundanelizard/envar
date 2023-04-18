@@ -104,6 +104,13 @@ func handleAdd(values *cli.ActionArgs, args []string) {
 	db := database.New(od)
 	ix := index.New(path.Join(ed, "index"))
 
+	err := ix.Load()
+
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+
 	var paths []string
 
 	if len(args) != 0 {
@@ -141,7 +148,7 @@ func handleAdd(values *cli.ActionArgs, args []string) {
 		ix.Add(p, blob.Id(), stat)
 	}
 
-	err := ix.WriteUpdates()
+	err = ix.WriteUpdates()
 	if err != nil {
 		logger.Fatal(err)
 		return

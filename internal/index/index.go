@@ -19,12 +19,16 @@ type Index struct {
 	entries  map[string]*Entry
 	lockfile *lockfile.Lockfile
 	digest   hash.Hash
+	path     string
+	changed  bool
 }
 
 func New(path string) *Index {
 	return &Index{
+		path:     path,
 		entries:  map[string]*Entry{},
 		lockfile: lockfile.New(path),
+		changed:  false,
 	}
 }
 
@@ -40,10 +44,7 @@ func (i *Index) WriteUpdates() error {
 	}
 
 	i.beginWrite()
-	header := []byte("DIRC")
-	header = append(header, make([]byte, 8)...)
-	binary.BigEndian.PutUint32(header[4:], 2)
-	binary.BigEndian.PutUint32(header[8:], uint32(len(i.entries)))
+	header := i.header()
 	err = i.write(header)
 	if err != nil {
 		return err
@@ -62,6 +63,60 @@ func (i *Index) WriteUpdates() error {
 	}
 
 	return nil
+}
+
+func (i *Index) Load() error {
+	err := i.lockfile.Hold()
+
+	if err != nil {
+		return err
+	}
+
+	return i.load()
+}
+
+func (i *Index) header() []byte {
+	header := []byte("DIRC")
+	header = append(header, make([]byte, 8)...)
+	binary.BigEndian.PutUint32(header[4:], 2)
+	binary.BigEndian.PutUint32(header[8:], uint32(len(i.entries)))
+	return header
+}
+
+func (i *Index) load() error {
+	i.clear()
+
+	file, err := os.Open(i.path)
+	if err != nil {
+		// it's perfectly normal for the file not to exist
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	defer file.Close()
+
+	reader := NewChecksum(file)
+
+	count := i.readHeader(reader)
+	i.readEntries(reader, count)
+
+	reader.verifyChecksum()
+
+	return nil
+}
+
+func (i *Index) readHeader(cs *Checksum) int {
+	return 0
+}
+
+func (i *Index) readEntries(cs *Checksum, count int) {
+
+}
+
+func (i *Index) clear() {
+	i.entries = map[string]*Entry{}
+	i.changed = false
 }
 
 func (i *Index) beginWrite() {
