@@ -1,5 +1,3 @@
-// Package blob /
-// Blob represents a file contents
 package database
 
 type Blob struct {
@@ -37,39 +35,3 @@ func (blob *Blob) Id() string {
 func (blob *Blob) Type() string {
 	return "blob"
 }
-
-/*
-type Tree struct {
-    Oid     string
-    Entries []Entry
-}
-
-type Entry struct {
-    Name string
-    Oid  string
-}
-
-func (t *Tree) Type() string {
-    return "tree"
-}
-
-func (t *Tree) String() string {
-    var buf bytes.Buffer
-    for _, entry := range t.Entries {
-        mode := "100644"
-        fmt.Fprintf(&buf, "%s %s\x00", mode, entry.Name)
-        buf.Write(hexDecode(entry.Oid))
-    }
-    return buf.String()
-}
-
-func hexDecode(hex string) []byte {
-    data, err := hex.DecodeString(hex)
-    if err != nil {
-        panic(err)
-    }
-    return data
-}
-
-
-*/

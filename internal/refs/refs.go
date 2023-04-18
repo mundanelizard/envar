@@ -59,3 +59,8 @@ func (r *Refs) ReadHead() (string, error) {
 
 	return string(buf), nil
 }
+
+func (r *Refs) UpdateHistory(commitId string) error {
+
+	return nil
+}

@@ -1,5 +1,3 @@
-// Package commit
-// Represents a commit in envi history.
 package database
 
 import (
@@ -21,6 +19,14 @@ func NewCommit(parent, treeId string, aut *Author, message string) *Commit {
 		message: message,
 		parent:  parent,
 	}
+}
+
+func ReadCommit(commitId string) (*Commit, error) {
+	return nil, nil
+}
+
+func (c *Commit) TreeId() string {
+	return c.treeId
 }
 
 func (c *Commit) Id() string {
