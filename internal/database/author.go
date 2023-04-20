@@ -2,11 +2,11 @@ package database
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
 type Author struct {
-	id        string
 	name      string
 	email     string
 	timestamp time.Time
@@ -28,14 +28,20 @@ func NewAuthor(name, email string, timestamp time.Time) *Author {
 	}
 }
 
-func (aut *Author) Id() string {
-	return aut.id
-}
+func NewAuthorFromByteArray(data string) (*Author, error) {
+	chunks := strings.Split(data, " - ")
+	email := strings.ReplaceAll(chunks[1], "<", "")
+	email = strings.ReplaceAll(email, ">", "")
+	timestamp, err := time.Parse(time.RFC3339, strings.Trim(chunks[2], ""))
+	if err != nil {
+		return nil, err
+	}
 
-func (aut *Author) SetId(id string) {
-	aut.id = id
+	author := NewAuthor(chunks[0], email, timestamp)
+
+	return author, nil
 }
 
 func (aut *Author) String() string {
-	return fmt.Sprintf("%s <%s> %s", aut.name, aut.email, aut.timestamp.Format(time.RFC3339))
+	return fmt.Sprintf("%s - <%s> - %s", aut.name, aut.email, aut.timestamp.Format(time.RFC3339))
 }

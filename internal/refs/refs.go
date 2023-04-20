@@ -2,6 +2,7 @@ package refs
 
 import (
 	"github.com/mundanelizard/envi/internal/lockfile"
+	"io"
 	"os"
 	"path"
 )
@@ -13,12 +14,12 @@ type Refs struct {
 
 func New(dir string) *Refs {
 	return &Refs{
-		dir:      dir,
-		headPath: path.Join(dir, "HEAD"),
+		dir:      path.Join(dir, "refs"),
+		headPath: path.Join(dir, "refs", "HEAD"),
 	}
 }
 
-func (r *Refs) UpdateHead(cid string) error {
+func (r *Refs) Update(cid string) error {
 	lock := lockfile.New(r.headPath)
 
 	err := lock.Hold()
@@ -39,7 +40,7 @@ func (r *Refs) UpdateHead(cid string) error {
 	return os.WriteFile(r.headPath, []byte(cid), 0755)
 }
 
-func (r *Refs) ReadHead() (string, error) {
+func (r *Refs) Read() (string, error) {
 	file, err := os.Open(r.headPath)
 	defer file.Close()
 
@@ -51,16 +52,10 @@ func (r *Refs) ReadHead() (string, error) {
 		}
 	}
 
-	buf := make([]byte, 0)
-	_, err = file.Read(buf)
+	data, err := io.ReadAll(file)
 	if err != nil {
 		return "", err
 	}
 
-	return string(buf), nil
-}
-
-func (r *Refs) UpdateHistory(commitId string) error {
-
-	return nil
+	return string(data), nil
 }

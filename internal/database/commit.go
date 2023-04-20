@@ -1,7 +1,9 @@
 package database
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 )
 
 type Commit struct {
@@ -21,8 +23,49 @@ func NewCommit(parent, treeId string, aut *Author, message string) *Commit {
 	}
 }
 
-func ReadCommit(commitId string) (*Commit, error) {
-	return nil, nil
+func NewCommitFromByteArray(id string, data []byte) (*Commit, error) {
+	content := string(data)
+	ok := strings.HasPrefix(content, "commit")
+	if !ok {
+		return nil, errors.New("object is not a commit")
+	}
+
+	chunks := strings.Split(content, "\x00")
+	content = strings.Join(chunks[1:], "")
+	chunks = strings.Split(content, "\n")
+
+	if len(chunks) != 5 && len(chunks) != 4 {
+		return nil, errors.New(fmt.Sprintf("invalid chucks length of %d", len(chunks)))
+	}
+
+	treeId := strings.Split(chunks[0], " ")[1]
+	offset := 0
+	var parent string
+
+	if len(chunks) == 5 {
+		offset = 1
+		parent = strings.Split(chunks[1], " ")[1]
+	}
+
+	fmt.Println(chunks)
+
+	trimmedAuthor := strings.Join(strings.Split(chunks[1+offset], " ")[1:], " ")
+	author, err := NewAuthorFromByteArray(trimmedAuthor)
+	if err != nil {
+		return nil, err
+	}
+
+	message := strings.Split(chunks[3+offset], " ")[1]
+
+	commit := &Commit{
+		id:      id,
+		aut:     author,
+		message: message,
+		parent:  parent,
+		treeId:  treeId,
+	}
+
+	return commit, nil
 }
 
 func (c *Commit) TreeId() string {

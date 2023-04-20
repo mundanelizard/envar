@@ -125,7 +125,7 @@ func (i *Index) beginWrite() {
 }
 
 func (i *Index) write(data []byte) error {
-	// Write the data to the lock file
+	// write the data to the lock file
 	err := i.lockfile.Write(data)
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func (i *Index) write(data []byte) error {
 }
 
 func (i *Index) finishWrite() error {
-	// Write the final SHA1 digest to the lock file
+	// write the final SHA1 digest to the lock file
 	err := i.lockfile.Write(i.digest.Sum(nil))
 	if err != nil {
 		return err

@@ -14,7 +14,7 @@ func NewBlob(data []byte) *Blob {
 	}
 }
 
-// implementing methods for database.Storable
+// todo => implementing methods for database.Storable
 
 func (blob *Blob) Size() int {
 	return len(blob.data)

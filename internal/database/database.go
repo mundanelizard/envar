@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -31,16 +32,31 @@ func New(dir string) *Db {
 	}
 }
 
+func (db *Db) Read(id string) ([]byte, error) {
+	file, err := os.Open(path.Join(db.dir, id[:2], id[2:]))
+
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	return decompress(data)
+}
+
 func (db *Db) Store(blob Storable) error {
 	data := blob.String()
 	size := len(data)
 	content := []byte(fmt.Sprintf("%s %d\x00%s", blob.Type(), size, data))
 	digest := hash(content)
 	blob.SetId(digest)
-	return db.Write(blob, content)
+	return db.write(blob, content)
 }
 
-func (db *Db) Write(blob Storable, content []byte) error {
+func (db *Db) write(blob Storable, content []byte) error {
 	id := blob.Id()
 	if len(id) == 0 {
 		return errors.New("invalid Blob.Id: requires a blob id to store blob")
@@ -133,4 +149,12 @@ func compress(content []byte) (bytes.Buffer, error) {
 	}
 
 	return buf, nil
+}
+
+func decompress(data []byte) ([]byte, error) {
+	reader, err := zlib.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	return io.ReadAll(reader)
 }
