@@ -36,3 +36,7 @@ func (e *Entry) Mode() string {
 
 	return ModeExecutable
 }
+
+func (e *Entry) String() string {
+	return e.name
+}

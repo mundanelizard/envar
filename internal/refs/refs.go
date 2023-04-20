@@ -1,10 +1,11 @@
 package refs
 
 import (
-	"github.com/mundanelizard/envi/internal/lockfile"
 	"io"
 	"os"
 	"path"
+
+	"github.com/mundanelizard/envi/internal/lockfile"
 )
 
 type Refs struct {

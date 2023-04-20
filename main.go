@@ -191,6 +191,7 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 		}
 
 		e := entry.New(p, b.Id(), stat)
+
 		entries = append(entries, e)
 	}
 
@@ -213,11 +214,14 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 		return
 	}
 
-	fmt.Println("Parent Id: ", pid)
-
-	err = detectEmptyCommit(db, pid, t.Id())
+	stale, err := detectEmptyCommit(db, pid, t.Id())
 	if err != nil {
 		logger.Fatal(err)
+		return
+	}
+
+	if stale {
+		fmt.Println("Working on a clean tree, nothing to commit")
 		return
 	}
 
@@ -236,32 +240,34 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 
 	meta := ""
 	if len(pid) == 0 {
-		meta = "(root-commit)"
+		meta = "(root-commit) "
 	}
 
-	fmt.Printf("[%s %s] %s\n", meta, com.Id(), strings.Split(message, "\n")[0])
+	fmt.Printf("[%s%s] %s\n", meta, com.Id(), strings.Split(message, "\n")[0])
 }
 
-func detectEmptyCommit(db *database.Db, pid, currTreeId string) error {
+func detectEmptyCommit(db *database.Db, pid, currTreeId string) (bool, error) {
 	if len(pid) == 0 {
-		return nil
+		return false, nil
 	}
 
 	obj, err := db.Read(pid)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	parent, err := database.NewCommitFromByteArray(pid, obj)
 	if err != nil {
-		return err
+		return false, err
 	}
+
+	// fmt.Println(parent)
 
 	if parent.TreeId() == currTreeId {
-		return err
+		return true, nil
 	}
 
-	return nil
+	return false, nil
 }
 
 func handleInit(_ *cli.ActionArgs, args []string) {

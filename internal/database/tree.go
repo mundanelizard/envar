@@ -23,6 +23,7 @@ type Enterable interface {
 	Mode() string
 	Name() string
 	Id() string
+	String() string
 }
 
 func NewTree(name string) *Tree {
@@ -105,7 +106,10 @@ func (t *Tree) Id() string {
 func (t *Tree) String() string {
 	var buf bytes.Buffer
 
-	for name, e := range t.entries {
+	keys := getSortedKeys(t.entries)
+
+	for _, name := range keys {
+		e := t.entries[name]
 		_, err := fmt.Fprintf(&buf, "%s %s\x00", e.Mode(), name)
 		if err != nil {
 			panic(err)
@@ -122,6 +126,18 @@ func (t *Tree) SetId(id string) {
 
 func (t *Tree) Type() string {
 	return "tree"
+}
+
+func getSortedKeys(m map[string]Enterable) []string {
+	keys := make([]string, 0)
+
+	for key := range m {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	return keys
 }
 
 func hexDecode(h string) []byte {

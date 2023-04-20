@@ -31,31 +31,27 @@ func NewCommitFromByteArray(id string, data []byte) (*Commit, error) {
 	}
 
 	chunks := strings.Split(content, "\x00")
-	content = strings.Join(chunks[1:], "")
-	chunks = strings.Split(content, "\n")
+	chunks = strings.Split(chunks[1], "\n")
 
-	if len(chunks) != 5 && len(chunks) != 4 {
-		return nil, errors.New(fmt.Sprintf("invalid chucks length of %d", len(chunks)))
+	if len(chunks) != 5 && len(chunks) != 6 {
+		return nil, fmt.Errorf("invalid chucks length of %d", len(chunks))
 	}
 
 	treeId := strings.Split(chunks[0], " ")[1]
 	offset := 0
 	var parent string
 
-	if len(chunks) == 5 {
+	if len(chunks) == 6 {
 		offset = 1
 		parent = strings.Split(chunks[1], " ")[1]
 	}
-
-	fmt.Println(chunks)
 
 	trimmedAuthor := strings.Join(strings.Split(chunks[1+offset], " ")[1:], " ")
 	author, err := NewAuthorFromByteArray(trimmedAuthor)
 	if err != nil {
 		return nil, err
 	}
-
-	message := strings.Split(chunks[3+offset], " ")[1]
+	message := chunks[4+offset]
 
 	commit := &Commit{
 		id:      id,
