@@ -2,18 +2,21 @@ package main
 
 import (
 	"fmt"
-	"github.com/mundanelizard/envi/internal/database"
-	"github.com/mundanelizard/envi/internal/entry"
-	"github.com/mundanelizard/envi/internal/index"
-	"github.com/mundanelizard/envi/internal/refs"
-	"github.com/mundanelizard/envi/internal/workspace"
-	"github.com/mundanelizard/envi/pkg/cli"
-	log "github.com/mundanelizard/envi/pkg/logger"
 	"os"
 	"path"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/mundanelizard/envi/internal/database"
+	"github.com/mundanelizard/envi/internal/entry"
+	"github.com/mundanelizard/envi/internal/index"
+	"github.com/mundanelizard/envi/internal/lockfile"
+	"github.com/mundanelizard/envi/internal/refs"
+	"github.com/mundanelizard/envi/internal/server"
+	"github.com/mundanelizard/envi/internal/workspace"
+	"github.com/mundanelizard/envi/pkg/cli"
+	log "github.com/mundanelizard/envi/pkg/logger"
 )
 
 var logger = log.New(os.Stdout, log.Info)
@@ -271,19 +274,69 @@ func detectEmptyCommit(db *database.Db, pid, currTreeId string) (bool, error) {
 }
 
 func handleInit(_ *cli.ActionArgs, args []string) {
-	newEnvDir := ed
+	ok, err := server.CheckAuthentication()
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+
+	if !ok {
+		fmt.Println("Authenticate with a server inorder to create an environment repository")
+		return
+	}
+
+	cwd := wd
 	if len(args) == 1 {
-		newEnvDir = path.Join(newEnvDir, args[0])
+		cwd = path.Join(cwd, args[0])
+	}
+
+	ced := path.Join(cwd, ".envi")
+
+	stat, err := os.Stat(ced)
+	if err == nil && stat.IsDir() {
+		fmt.Println("Reinitialised current repository")
+		return
 	}
 
 	dirs := []string{"objects", "refs"}
 
 	for _, dir := range dirs {
-		err := os.MkdirAll(path.Join(newEnvDir, dir), 0755)
+		err := os.MkdirAll(path.Join(ced,  dir), 0755)
 		if err != nil {
 			logger.Fatal(err)
 		}
 	}
 
-	fmt.Printf("Initialised empty envi directory in %s", wd)
+	// creating a repository on the server and saving the remote
+	repoName := path.Base(cwd)
+	remotelock := lockfile.New(path.Join(ced, "remote"))
+	remotelock.Hold()
+	endpoint, err := server.CreateNewRepo(repoName)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+	remotelock.Write([]byte(endpoint))
+	remotelock.Commit()
+
+	// creating a envi file and populating it to only accept .env files
+	envimatchlock := lockfile.New(path.Join(cwd, ".envmatch"))
+	envimatchlock.Hold()
+	envimatchlock.Write([]byte("**/**/*.env"))
+	envimatchlock.Commit()
+
+	// updating/creating a .gitignore file to ignore .env, .envfiles, and .envi
+	ignore, err := os.ReadFile(".gitignore")
+	if err != nil {
+		fmt.Println("Creating .gitignore file in new repository")
+	}
+
+	ignore = append(ignore, []byte("\n.env\n.envfile\n.envi")...)
+
+	gitignorelock := lockfile.New(path.Join(cwd, ".gitignore"))
+	gitignorelock.Hold()
+	gitignorelock.Write(ignore)
+	gitignorelock.Commit()
+
+	fmt.Printf("Initialised empty envi directory in %s\n", wd)
 }
