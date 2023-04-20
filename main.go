@@ -340,3 +340,4 @@ func handleInit(_ *cli.ActionArgs, args []string) {
 
 	fmt.Printf("Initialised empty envi directory in %s\n", wd)
 }
+

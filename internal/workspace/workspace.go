@@ -3,27 +3,55 @@
 package workspace
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 type Workspace struct {
-	dir string
+	dir   string
+	globs []string
 }
-
-// paths to ignore when listing files in the working tree
-var ignore = []string{".", "..", ".envi", ".git", ".idea"}
 
 func New(dir string) *Workspace {
 	return &Workspace{
-		dir: dir,
+		dir:   dir,
+		globs: []string{"**/*.env"},
 	}
 }
 
 func (ws *Workspace) ListFiles() ([]string, error) {
+	err := ws.loadMatch()
+
+	if err != nil {
+		return nil, err
+	}
+
 	return ws.listFiles(ws.dir)
+}
+
+func (ws *Workspace) loadMatch() error {
+	file, err := os.ReadFile(path.Join(".envmatch"))
+	if err != nil {
+		return err
+	}
+
+	ws.globs = append(ws.globs, strings.Split(string(file), "\n")...)
+	return nil
+}
+
+func (ws *Workspace) match(path string) bool {
+	for _, glob := range ws.globs {
+		ok, _ := filepath.Match(glob, path)
+		if ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (ws *Workspace) listFiles(dir string) ([]string, error) {
@@ -34,9 +62,12 @@ func (ws *Workspace) listFiles(dir string) ([]string, error) {
 
 	var paths []string
 	for _, entry := range entries {
-		if has(ignore, entry.Name()) {
+		// skipping files that do not match the glob
+		if !ws.match(entry.Name()) {
 			continue
 		}
+
+		fmt.Println("Committing", entry.Name())
 
 		newDir := path.Join(dir, entry.Name())
 
