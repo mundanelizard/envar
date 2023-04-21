@@ -10,6 +10,16 @@ func CreateNewRepo(name string) (string, error) {
 	return fmt.Sprintf("https://localhost:8080/repos/%s", name), nil
 }
 
+func CheckAccess(repo string) (bool, error) {
+	return true, nil
+}
+
+func PushCount(repo string) (int, error) {
+
+	return 0, nil
+}
+
+
 type User struct {
 	email string
 	name  string

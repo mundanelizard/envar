@@ -13,6 +13,7 @@ func main() {
 	app.AddCommand(command.Init())
 	app.AddCommand(command.Add())
 	app.AddCommand(command.Commit())
+	app.AddCommand(command.Push())
 
 	app.Execute(os.Args)
 }
