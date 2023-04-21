@@ -1,0 +1,67 @@
+package main
+
+import (
+    "crypto/aes"
+    "crypto/cipher"
+    "crypto/rand"
+    "fmt"
+    "io"
+    "os"
+)
+
+func main() {
+    // Open the input file
+    inputFile, err := os.Open("input.txt")
+    if err != nil {
+        panic(err)
+    }
+    defer inputFile.Close()
+
+    // Create the output file
+    outputFile, err := os.Create("output.txt")
+    if err != nil {
+        panic(err)
+    }
+    defer outputFile.Close()
+
+    // Generate a random key
+    key := make([]byte, 32)
+    _, err = rand.Read(key)
+    if err != nil {
+        panic(err)
+    }
+
+    // Write the key to the output file
+    _, err = outputFile.Write(key)
+    if err != nil {
+        panic(err)
+    }
+
+    // Create the AES cipher block
+    block, err := aes.NewCipher(key)
+    if err != nil {
+        panic(err)
+    }
+
+    // Create the encryption stream
+    iv := make([]byte, aes.BlockSize)
+    _, err = rand.Read(iv)
+    if err != nil {
+        panic(err)
+    }
+    stream := cipher.NewCFBEncrypter(block, iv)
+
+    // Write the IV to the output file
+    _, err = outputFile.Write(iv)
+    if err != nil {
+        panic(err)
+    }
+
+    // Copy the input file to the output file, encrypting as we go
+    _, err = io.Copy(outputFile, io.TeeReader(inputFile, stream))
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Println("File encrypted successfully")
+}

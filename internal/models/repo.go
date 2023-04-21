@@ -9,5 +9,6 @@ type Repo struct {
 	Id           string
 	Name         string // username:repo
 	OwnerId      string
+	Secret       string
 	Contributors []Contributor
 }

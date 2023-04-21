@@ -1,0 +1,55 @@
+package main
+
+import (
+    "crypto/aes"
+    "crypto/cipher"
+    "fmt"
+    "os"
+)
+
+func main() {
+    // Open the input file
+    inputFile, err := os.Open("output.txt")
+    if err != nil {
+        panic(err)
+    }
+    defer inputFile.Close()
+
+    // Read the key from the input file
+    key := make([]byte, 32)
+    _, err = inputFile.Read(key)
+    if err != nil {
+        panic(err)
+    }
+
+    // Create the AES cipher block
+    block, err := aes.NewCipher(key)
+    if err != nil {
+        panic(err)
+    }
+
+    // Read the IV from the input file
+    iv := make([]byte, aes.BlockSize)
+    _, err = inputFile.Read(iv)
+    if err != nil {
+        panic(err)
+    }
+
+    // Create the decryption stream
+    stream := cipher.NewCFBDecrypter(block, iv)
+
+    // Create the output file
+    outputFile, err := os.Create("input.txt")
+    if err != nil {
+        panic(err)
+    }
+    defer outputFile.Close()
+
+    // Copy the input file to the output file, decrypting as we go
+    _, err = io.Copy(outputFile, io.TeeReader(inputFile, stream))
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Println("File decrypted successfully")
+}

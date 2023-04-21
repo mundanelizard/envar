@@ -1,0 +1,21 @@
+package main
+
+import (
+    "crypto/rand"
+    "encoding/hex"
+    "fmt"
+)
+
+func main() {
+    // Generate a random byte slice
+    b := make([]byte, 16)
+    _, err := rand.Read(b)
+    if err != nil {
+        panic(err)
+    }
+
+    // Convert the byte slice to a hex string
+    s := hex.EncodeToString(b)
+
+    fmt.Println(s)
+}
