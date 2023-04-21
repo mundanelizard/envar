@@ -13,10 +13,10 @@ type Refs struct {
 	headPath string
 }
 
-func New(dir string) *Refs {
+func New(wd string) *Refs {
 	return &Refs{
-		dir:      path.Join(dir, "refs"),
-		headPath: path.Join(dir, "refs", "HEAD"),
+		dir:      path.Join(wd),
+		headPath: path.Join(wd, "HEAD"),
 	}
 }
 

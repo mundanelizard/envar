@@ -25,6 +25,42 @@ func New(filePath string) *Lockfile {
 	}
 }
 
+func WriteWithLock(path string, data []byte) error {
+	gitignorelock := New(path)
+	err := gitignorelock.Hold()
+	if err != nil {
+		return err
+	}
+
+	err = gitignorelock.Write(data)
+	if err != nil {
+		return err
+	}
+
+	err = gitignorelock.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func AppendWithLock(path string, data []byte) error {
+	oldData, err := os.ReadFile(".gitignore")
+	if err != nil {
+		return err
+	}
+
+	newData := append(oldData, data...)
+
+	err = WriteWithLock(path, newData)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (l *Lockfile) Hold() error {
 	if l.lock != nil {
 		return nil
