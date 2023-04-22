@@ -93,17 +93,15 @@ func (srv *server) handleCreateRepo(w http.ResponseWriter, r *http.Request, _ ht
 	repoName := body.Name + "-" + user.Username
 
 	var oldRepo models.Repo
-	err = srv.db.Collection("users").FindOne(srv.ctx, map[string]string{"name": repoName}).Decode(oldRepo)
+	err = srv.db.Collection("repo").FindOne(srv.ctx, map[string]string{"name": repoName}).Decode(oldRepo)
 	if err != mongo.ErrNoDocuments {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	secret := genRandomString()
-
 	repo := &models.Repo{
 		Name:         repoName,
-		Secret:       hashPassword(secret),
+		Secret:       body.Secret,
 		Contributors: []models.Contributor{},
 	}
 
@@ -114,8 +112,7 @@ func (srv *server) handleCreateRepo(w http.ResponseWriter, r *http.Request, _ ht
 	}
 
 	srv.send(w, 200, map[string]interface{}{
-		"repo":   repo,
-		"secret": secret,
+		"repo": repo,
 	})
 }
 
@@ -227,7 +224,7 @@ func (srv *server) handlePush(w http.ResponseWriter, r *http.Request, params htt
 	repoName := params.ByName("repo")
 	key := username + "-" + repoName
 
-	contributorQuery := map[string]string{"contributors": user.Id}
+	contributorQuery := map[string]string{"contributors.owner_id": user.Id, "contributors.role": "W"}
 	ownerQuery := map[string]string{"owner_id": user.Id}
 	subQueries := []map[string]string{contributorQuery, ownerQuery}
 	query := map[string]interface{}{"$or": subQueries, "name": key}
@@ -236,6 +233,12 @@ func (srv *server) handlePush(w http.ResponseWriter, r *http.Request, params htt
 	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
 	if err != mongo.ErrNoDocuments {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	secret := r.Header.Get("Repo-Secret")
+	if !verifyPassword(secret, repo.Secret) {
+		http.Error(w, "invalid header: secret is invalid and doesn't match db content", http.StatusBadRequest)
 		return
 	}
 
@@ -272,20 +275,35 @@ func (srv *server) handleShareRepo(w http.ResponseWriter, r *http.Request, param
 		return
 	}
 
+	username := params.ByName("user")
+	repoName := params.ByName("repo")
+	key := username + "-" + repoName
+
 	share, err := srv.extractShareRepoFromBody(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	contributor := models.Contributor{
-		UserId: share.Id,
-		Role: share.Role,
+	query := map[string]string{"owner_id": user.Id, "name": key}
+
+	var repo models.Repo
+	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
+	if err != nil {
+		http.Error(w, "invalid header: can not find repository", http.StatusBadRequest)
+		return
 	}
 
-	username := params.ByName("user")
-	repoName := params.ByName("repo")
-	key := username + "-" + repoName
+	secret := r.Header.Get("Repo-Secret")
+	if !verifyPassword(secret, repo.Secret) {
+		http.Error(w, "invalid header: secret is invalid and doesn't match db content", http.StatusBadRequest)
+		return
+	}
+
+	contributor := models.Contributor{
+		UserId: share.Id,
+		Role:   share.Role,
+	}
 
 	filter := bson.M{"name": key, "owner_id": user.Id}
 	update := bson.M{"$push": bson.M{"contributors": contributor}}
@@ -314,12 +332,27 @@ func (srv *server) handleRemoveAccess(w http.ResponseWriter, r *http.Request, pa
 
 	contributor := models.Contributor{
 		UserId: share.Id,
-		Role: share.Role,
+		Role:   share.Role,
 	}
 
 	username := params.ByName("user")
 	repoName := params.ByName("repo")
 	key := username + "-" + repoName
+
+	query := map[string]string{"owner_id": user.Id, "name": key}
+
+	var repo models.Repo
+	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
+	if err != nil {
+		http.Error(w, "invalid header: can not find repository", http.StatusBadRequest)
+		return
+	}
+
+	secret := r.Header.Get("Repo-Secret")
+	if !verifyPassword(secret, repo.Secret) {
+		http.Error(w, "invalid header: secret is invalid and doesn't match db content", http.StatusBadRequest)
+		return
+	}
 
 	filter := bson.M{"name": key, "owner_id": user.Id}
 	update := bson.M{"$pull": bson.M{"contributors": contributor}}

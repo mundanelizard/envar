@@ -26,7 +26,8 @@ func (srv *server) extractUserFromBody(reader io.Reader) (*models.User, error) {
 }
 
 type LeanRepo struct {
-	Name string
+	Name   string
+	Secret string
 }
 
 func (srv *server) extractRepoFromBody(reader io.Reader) (*LeanRepo, error) {
@@ -45,13 +46,17 @@ func (srv *server) extractRepoFromBody(reader io.Reader) (*LeanRepo, error) {
 		return nil, errors.New("invalid body: expecting name field of type string")
 	}
 
+	if len(repo.Secret) == 0 {
+		return nil, errors.New("invalid body: expecting LeanRepo.Secret of type string")
+	}
+
 	return &repo, nil
 }
 
 type ShareRepo struct {
 	Username string
-	Role string
-	Id string
+	Role     string
+	Id       string
 }
 
 func (srv *server) extractShareRepoFromBody(reader io.Reader) (*ShareRepo, error) {
