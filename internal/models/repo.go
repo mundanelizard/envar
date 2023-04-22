@@ -6,9 +6,11 @@ type Contributor struct {
 }
 
 type Repo struct {
-	Id           string
-	Name         string // username:repo
-	OwnerId      string
-	Secret       string
-	Contributors []Contributor
+	Id           string        `bson:"_id"`
+	Name         string        `bson:"name"` // username:repo
+	OwnerId      string        `bson:"owner_id"`
+	Secret       string        `bson:"secret"`
+	CommitId     string        `bson:"commit_id"`
+	TreeId       string        `json:"-" bson:"tree_id"`
+	Contributors []Contributor `bson:"contibutors"`
 }

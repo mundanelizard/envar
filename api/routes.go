@@ -11,13 +11,13 @@ func (srv *server) routes() http.Handler {
 	router.POST("/users/", srv.handleSignup)
 	router.POST("/users/login", srv.handleLogin)
 
-	router.POST("/repos/:user", handleCreateRepo)
-	router.POST("/repos/:user", handleGetRepos)
+	router.POST("/repos/", srv.handleCreateRepo)
 
-	router.POST("/repos/:user/:repo/recent", handleUploadRepoHandshakeInit)
-	router.POST("/repos/:user/:repo/verify", handleVerifyRepoHandshakeVerify)
+	router.GET("/repos/:user/", srv.handleGetRepos)
+	router.GET("/repos/:user/:repo/", handleGetRepo)
 
-	router.GET("/repos/:user/:repo/pull", srv.handlePullRequest)
+	router.GET("/repos/:user/:repo/pull", srv.handlePull)
+	router.POST("/repos/:user/:repo/push", srv.handlePush)
 
 	router.POST("/repos/:user/:repo/upload", handleUpdateRepo)
 	router.POST("/repos/:user/:repo/share", handleShareRepo)

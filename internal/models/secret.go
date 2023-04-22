@@ -1,8 +1,7 @@
 package models
 
 type Secret struct {
-	Id      string // access token should be string
-	OwnerId string
-	Secret  string
-	Token   string
+	Id      string `bson:"_id"` // access token should be string
+	OwnerId string `bson:"user_id"`
+	Token   string `bson:"token"`
 }
