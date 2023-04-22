@@ -1,8 +1,8 @@
 package models
 
 type Contributor struct {
-	OwnerId string
-	Role    string // admin, read, write
+	UserId string `bson:"user_id"`
+	Role   string `bson:"role"` // admin, read, write
 }
 
 type Repo struct {

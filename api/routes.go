@@ -19,7 +19,6 @@ func (srv *server) routes() http.Handler {
 	router.GET("/repos/:user/:repo/pull", srv.handlePull)
 	router.POST("/repos/:user/:repo/push", srv.handlePush)
 
-	router.POST("/repos/:user/:repo/upload", srv.handleUpdateRepo)
 	router.POST("/repos/:user/:repo/share", srv.handleShareRepo)
 	router.POST("repos/:user/:repo/revoke", srv.handleRemoveAccess)
 
