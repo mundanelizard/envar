@@ -154,18 +154,48 @@ func (srv *server) handleGetRepos(w http.ResponseWriter, r *http.Request, _ http
 
 	cur.Close(srv.ctx)
 
-	srv.send(w, 200, results)
+	srv.send(w, http.StatusOK, results)
 }
 
+func (srv *server) handleGetRepo(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	user, err := srv.extractUserFromHeaderToken(r.Header)
+	if err != nil {
+		srv.send(w, http.StatusUnauthorized, genErrorRes(err.Error()))
+		return
+	}
 
-func handleUpdateRepo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	username := params.ByName("user")
+	repoName := params.ByName("repo")
+
+	key := username + ":" + repoName
+	query := map[string]string{"owner_id": user.Id, "name": key}
+
+	var repo models.Repo
+	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
+	if err != mongo.ErrNoDocuments {
+		srv.send(w, http.StatusBadRequest, genErrorRes(err.Error()))
+		return
+	}
+
+	srv.send(w, http.StatusOK, repo)
+}
+
+func (srv *server) handlePull(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	
+}
+
+func (srv *server) handlePush(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 }
 
-func handleShareRepo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (srv *server) handleUpdateRepo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 }
 
-func handleRemoveAccess(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (srv *server) handleShareRepo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+
+}
+
+func (srv *server) handleRemoveAccess(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 }
