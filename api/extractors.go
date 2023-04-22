@@ -48,6 +48,45 @@ func (srv *server) extractRepoFromBody(reader io.Reader) (*LeanRepo, error) {
 	return &repo, nil
 }
 
+type ShareRepo struct {
+	Username string
+	Role string
+	Id string
+}
+
+func (srv *server) extractShareRepoFromBody(reader io.Reader) (*ShareRepo, error) {
+	body, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	var repo ShareRepo
+
+	err = json.Unmarshal(body, &repo)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(repo.Username) == 0 {
+		return nil, errors.New("invalid body: expecting ShareRepo.Username field of type string")
+	}
+
+	if repo.Role != "W" && repo.Role != "R" && repo.Role != "RW" {
+		return nil, errors.New("invalid body: expected ShareRepo.Username of 'R', 'W' and 'RW'")
+	}
+
+	var user models.User
+	query := map[string]string{"username": repo.Username}
+	err = srv.db.Collection("user").FindOne(srv.ctx, query).Decode(&user)
+	if err != nil {
+		srv.logger.Warn(err.Error())
+		return nil, errors.New("invalid username: user doesn't exist please check the username and retry")
+	}
+
+	repo.Id = user.Id
+
+	return &repo, nil
+}
+
 var ErrUnauthorised = errors.New("unauthorised request")
 
 func (srv *server) extractUserFromHeaderToken(header http.Header) (*models.User, error) {

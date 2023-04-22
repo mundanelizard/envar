@@ -8,6 +8,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mundanelizard/envi/internal/models"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -264,10 +265,70 @@ func (srv *server) handlePush(w http.ResponseWriter, r *http.Request, params htt
 	srv.send(w, http.StatusOK, map[string]bool{"success": true})
 }
 
-func (srv *server) handleShareRepo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (srv *server) handleShareRepo(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	user, err := srv.extractUserFromHeaderToken(r.Header)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
+	share, err := srv.extractShareRepoFromBody(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	contributor := models.Contributor{
+		UserId: share.Id,
+		Role: share.Role,
+	}
+
+	username := params.ByName("user")
+	repoName := params.ByName("repo")
+	key := username + "-" + repoName
+
+	filter := bson.M{"name": key, "owner_id": user.Id}
+	update := bson.M{"$push": bson.M{"contributors": contributor}}
+
+	_, err = srv.db.Collection("repos").UpdateOne(srv.ctx, filter, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	srv.send(w, http.StatusOK, map[string]bool{"success": true})
 }
 
-func (srv *server) handleRemoveAccess(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (srv *server) handleRemoveAccess(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	user, err := srv.extractUserFromHeaderToken(r.Header)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
+	share, err := srv.extractShareRepoFromBody(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	contributor := models.Contributor{
+		UserId: share.Id,
+		Role: share.Role,
+	}
+
+	username := params.ByName("user")
+	repoName := params.ByName("repo")
+	key := username + "-" + repoName
+
+	filter := bson.M{"name": key, "owner_id": user.Id}
+	update := bson.M{"$pull": bson.M{"contributors": contributor}}
+
+	_, err = srv.db.Collection("repos").UpdateOne(srv.ctx, filter, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	srv.send(w, http.StatusOK, map[string]bool{"success": true})
 }
