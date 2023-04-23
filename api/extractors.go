@@ -75,8 +75,8 @@ func (srv *server) extractShareRepoFromBody(reader io.Reader) (*ShareRepo, error
 		return nil, errors.New("invalid body: expecting ShareRepo.Username field of type string")
 	}
 
-	if repo.Role != "W" && repo.Role != "R" && repo.Role != "RW" {
-		return nil, errors.New("invalid body: expected ShareRepo.Username of 'R', 'W' and 'RW'")
+	if repo.Role != "W" && repo.Role != "R" {
+		return nil, errors.New("invalid body: expected ShareRepo.Username of 'R' and 'W'")
 	}
 
 	var user models.User
