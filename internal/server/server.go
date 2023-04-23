@@ -250,7 +250,12 @@ func (srv *Server) CreateNewRepo(repo string) (string, error) {
 	return string(body), nil
 }
 
-func (srv *Server) PushRepo(repo, filepath string) error {
+func (srv *Server) PushRepo(repo, treeId, filepath, secret string) error {
+	token, err := srv.retrieveToken()
+	if err != nil {
+		return err
+	}
+
 	url, err := url.JoinPath(srv.endpoint, repo)
 	if err != nil {
 		return err
@@ -280,14 +285,18 @@ func (srv *Server) PushRepo(repo, filepath string) error {
 		return err
 	}
 
-	request, err := http.NewRequest(http.MethodPost, url, body)
+	req, err := http.NewRequest(http.MethodPost, url, body)
 	if err != nil {
 		return err
 	}
 
-	request.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Access-Token", token)
+	req.Header.Set("Repo-Tree-Id", treeId)
+	req.Header.Set("Repo-Secret", secret)
+
 	client := &http.Client{}
-	res, err := client.Do(request)
+	res, err := client.Do(req)
 	if err != nil {
 		return err
 	}
