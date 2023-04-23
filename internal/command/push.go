@@ -24,7 +24,7 @@ func Push() *cli.Command {
 }
 
 func handlePush(values *cli.ActionArgs, args []string) {
-	ok, err := server.CheckAuthentication()
+	ok, err := server.RetrieveUser()
 	if err != nil {
 		logger.Fatal(err)
 		return
@@ -86,7 +86,7 @@ func handleInitialPush(repo string) error {
 
 func uploadZipToServer(zipDir string) error {
 	url := "http://localhost:9000"
-	
+
 	file, err := os.Open(zipDir)
 	if err != nil {
 		return err

@@ -29,7 +29,7 @@ func Init() *cli.Command {
 }
 
 func handleInit(_ *cli.ActionArgs, args []string) {
-	ok, err := server.CheckAuthentication()
+	ok, err := server.RetrieveUser()
 	if err != nil {
 		logger.Fatal(err)
 		return
@@ -91,7 +91,6 @@ func handleInit(_ *cli.ActionArgs, args []string) {
 	fmt.Printf("Initialised empty envi directory in %s\n", wd)
 }
 
-
 func createEnviSubdirectories(enviDir string) error {
 	dirs := []string{"objects", "refs"}
 
@@ -101,6 +100,6 @@ func createEnviSubdirectories(enviDir string) error {
 			return err
 		}
 	}
-	
+
 	return nil
 }

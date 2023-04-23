@@ -32,7 +32,7 @@ func (srv *server) handleSignup(w http.ResponseWriter, r *http.Request, _ httpro
 		return
 	}
 
-	srv.send(w, http.StatusCreated, user)
+	srv.send(w, http.StatusCreated, "user creation successful")
 }
 
 func (srv *server) handleLogin(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -71,10 +71,7 @@ func (srv *server) handleLogin(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	srv.send(w, 200, map[string]interface{}{
-		"token": token,
-		"user":  user,
-	})
+	srv.send(w, 200, token)
 }
 
 func (srv *server) handleCreateRepo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
