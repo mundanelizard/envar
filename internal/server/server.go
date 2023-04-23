@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -13,6 +12,18 @@ import (
 )
 
 var endpoint = "http://localhost:5000/"
+
+type Server struct {
+	endpoint string
+	tokenDir string
+}
+
+func New(endpoint, tokenDir string) *Server {
+	return &Server{
+		endpoint: endpoint,
+		tokenDir: tokenDir,
+	}
+}
 
 func validUserDetail(username, password string) error {
 	if len(username) == 0 {
@@ -24,13 +35,13 @@ func validUserDetail(username, password string) error {
 	return nil
 }
 
-func CreateAccount(username, password string) error {
+func (srv *Server) CreateAccount(username, password string) error {
 	err := validUserDetail(username, password)
 	if err != nil {
 		return err
 	}
 
-	url, err := url.JoinPath(endpoint, "/repos/")
+	url, err := url.JoinPath(srv.endpoint, "/repos/")
 	if err != nil {
 		return err
 	}
@@ -67,7 +78,7 @@ func CreateAccount(username, password string) error {
 	return nil
 }
 
-func AuthenticationAccount(username, password string) error {
+func (srv *Server) AuthenticationAccount(username, password string) error {
 	err := validUserDetail(username, password)
 	if err != nil {
 		return err
@@ -110,13 +121,16 @@ func AuthenticationAccount(username, password string) error {
 	token := string(body)
 
 	// todo => save token to cache directory
-	saveToken(token)
+	err = srv.saveToken(token)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func RetrieveUser() (*models.User, error) {
-	token, err := retrieveToken()
+func (srv *Server) RetrieveUser() (*models.User, error) {
+	token, err := srv.retrieveToken()
 	if err != nil {
 		return nil, err
 	}
@@ -146,12 +160,15 @@ func RetrieveUser() (*models.User, error) {
 
 	user := &models.User{}
 	err = json.Unmarshal(body, user)
+	if err != nil {
+		return nil, err
+	}
 
 	return user, nil
 }
 
-func RetrieveRepo(username, name string) (*models.Repo, error) {
-	token, err := retrieveToken()
+func (srv *Server) RetrieveRepo(username, name string) (*models.Repo, error) {
+	token, err := srv.retrieveToken()
 	if err != nil {
 		return nil, err
 	}
@@ -180,12 +197,15 @@ func RetrieveRepo(username, name string) (*models.Repo, error) {
 
 	repo := &models.Repo{}
 	err = json.Unmarshal(body, repo)
+	if err != nil {
+		return nil, err
+	}
 
 	return repo, nil
 }
 
-func CreateNewRepo(username, name string) (string, error) {
-	token, err := retrieveToken()
+func (srv *Server) CreateNewRepo(username, name string) (string, error) {
+	token, err := srv.retrieveToken()
 	if err != nil {
 		return "", err
 	}
@@ -195,10 +215,9 @@ func CreateNewRepo(username, name string) (string, error) {
 		return "", err
 	}
 
-	// gen secret
-
-	data := map[string]string {
-		"Name": name,
+	secret := ""
+	data := map[string]string{
+		"Name":   name,
 		"Secret": secret,
 	}
 
@@ -207,17 +226,31 @@ func CreateNewRepo(username, name string) (string, error) {
 		return "", err
 	}
 
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
+	if err != nil {
+		return "", nil
+	}
+	req.Header.Set("Access-Token", token)
 
-	req, err := http.NewRequest(http.MethodPost, url, body)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
 
-	return fmt.Sprintf("https://localhost:8080/repos/%s", name), nil
+	body, err = io.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
 }
 
-func PushRepo(username, name string) (error) {
+func PushRepo(username, name string) error {
 
 	return nil
 }
 
-func PullRespoitory(username, name string) (io.ReadCloser, error) {
+func PullRepo(username, name string) (io.ReadCloser, error) {
 	return nil, nil
 }
