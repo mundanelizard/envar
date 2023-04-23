@@ -2,12 +2,15 @@ package command
 
 import (
 	"archive/zip"
+	"crypto/aes"
+	"crypto/cipher"
 	"fmt"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 
+	"github.com/mundanelizard/envi/internal/lockfile"
 	"github.com/mundanelizard/envi/pkg/cli"
 )
 
@@ -37,7 +40,9 @@ func handlePush(values *cli.ActionArgs, args []string) {
 		return
 	}
 
-	encDir, err := encryptCompressedEnvironment(comDir)
+	secret, _ := values.GetString("secret")
+
+	encDir, err := encryptCompressedEnvironment(comDir, secret)
 	if err != nil {
 		logger.Fatal(err)
 		return
@@ -49,12 +54,52 @@ func handlePush(values *cli.ActionArgs, args []string) {
 		return
 	}
 
+	os.Remove(encDir)
+	os.Remove(comDir)
+
 	fmt.Println("Environment has been pushed to server")
 }
 
-func encryptCompressedEnvironment(zip string) (string, error) {
+func encryptCompressedEnvironment(dir, secret string) (string, error) {
+	in, err := os.Open(dir)
+	if err != nil {
+		return "", err
+	}
+	defer in.Close()
 
-	return "", nil
+	data, err := io.ReadAll(in)
+	if err != nil {
+		return "", err
+	}
+
+	outDir := path.Join(dir, ".enc")
+	lock := lockfile.New(outDir)
+	err = lock.Hold()
+	if err != nil {
+		return "", err
+	}
+	defer lock.Commit()
+
+	cphr, err := aes.NewCipher([]byte(secret))
+	if err != nil {
+		return "", err
+	}
+
+	cipherText := make([]byte, len(data))
+	iv := make([]byte, aes.BlockSize)
+	cipher.NewCFBEncrypter(cphr, iv).XORKeyStream(cipherText, data)
+
+	err = lock.Write(cipherText)
+	if err != nil {
+		return "", err
+	}
+
+	err = lock.Commit()
+	if err != nil {
+		return "", err
+	}
+
+	return outDir, nil
 }
 
 func compressEnvironment(repo string) (string, error) {
