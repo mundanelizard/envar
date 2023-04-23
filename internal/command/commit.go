@@ -9,7 +9,6 @@ import (
 	"github.com/mundanelizard/envi/internal/database"
 	"github.com/mundanelizard/envi/internal/entry"
 	"github.com/mundanelizard/envi/internal/refs"
-	"github.com/mundanelizard/envi/internal/server"
 	"github.com/mundanelizard/envi/internal/workspace"
 	"github.com/mundanelizard/envi/pkg/cli"
 )
@@ -32,7 +31,6 @@ func Commit() *cli.Command {
 		Action: handleCommit,
 	}
 }
-
 
 func handleCommit(values *cli.ActionArgs, args []string) {
 	db := database.New(path.Join(wd, ".envi", "objects"))
@@ -78,18 +76,13 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 	}
 
 	// retreiving the user data
-	user, ok, err := server.GetUser();
+	user, err := srv.RetrieveUser()
 	if err != nil {
 		logger.Fatal(err)
 		return
 	}
 
-	if !ok {
-		fmt.Println("Authenticate with a server inorder commit to envi")
-		return
-	}
-
-	aut := database.NewAuthor(user.Name(), user.Email(), time.Now())
+	aut := database.NewAuthor(user.Username, time.Now())
 	message, _ := values.GetString("message")
 
 	com := database.NewCommit(pid, t.Id(), aut, message)
@@ -145,7 +138,7 @@ func getWorkspaceEntries(db *database.Db) ([]database.Enterable, error) {
 		var data []byte
 		data, err = ws.ReadFile(p)
 		if err != nil {
-			return nil, err 
+			return nil, err
 		}
 
 		b := database.NewBlob(data)

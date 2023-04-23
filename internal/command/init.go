@@ -6,7 +6,6 @@ import (
 	"path"
 
 	"github.com/mundanelizard/envi/internal/lockfile"
-	"github.com/mundanelizard/envi/internal/server"
 	"github.com/mundanelizard/envi/pkg/cli"
 )
 
@@ -29,14 +28,9 @@ func Init() *cli.Command {
 }
 
 func handleInit(_ *cli.ActionArgs, args []string) {
-	ok, err := server.RetrieveUser()
+	_, err := srv.RetrieveUser()
 	if err != nil {
 		logger.Fatal(err)
-		return
-	}
-
-	if !ok {
-		fmt.Println("Authenticate with a server inorder to create an envi repository")
 		return
 	}
 
@@ -62,7 +56,7 @@ func handleInit(_ *cli.ActionArgs, args []string) {
 
 	// creating a repository on the server and saving the remote
 	repoName := path.Base(cwd)
-	endpoint, err := server.CreateNewRepo(repoName)
+	endpoint, err := srv.CreateNewRepo(repoName)
 	if err != nil {
 		logger.Fatal(err)
 		return

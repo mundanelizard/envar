@@ -12,14 +12,12 @@ type Author struct {
 	timestamp time.Time
 }
 
-func NewAuthor(name, email string, timestamp time.Time) *Author {
+func NewAuthor(name string, timestamp time.Time) *Author {
 	if len(name) == 0 {
 		name = "John Doe"
 	}
 
-	if len(email) == 0 {
-		email = "john.doe@envi.org"
-	}
+	email := "john.doe@envi.org"
 
 	return &Author{
 		name:      name,
@@ -30,14 +28,14 @@ func NewAuthor(name, email string, timestamp time.Time) *Author {
 
 func NewAuthorFromByteArray(data string) (*Author, error) {
 	chunks := strings.Split(data, " - ")
-	email := strings.ReplaceAll(chunks[1], "<", "")
-	email = strings.ReplaceAll(email, ">", "")
+	// email := strings.ReplaceAll(chunks[1], "<", "")
+	// email = strings.ReplaceAll(email, ">", "")
 	timestamp, err := time.Parse(time.RFC3339, strings.Trim(chunks[2], ""))
 	if err != nil {
 		return nil, err
 	}
 
-	author := NewAuthor(chunks[0], email, timestamp)
+	author := NewAuthor(chunks[0], timestamp)
 
 	return author, nil
 }

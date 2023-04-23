@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/mundanelizard/envi/internal/models"
 )
@@ -15,13 +17,11 @@ var endpoint = "http://localhost:5000/"
 
 type Server struct {
 	endpoint string
-	tokenDir string
 }
 
-func New(endpoint, tokenDir string) *Server {
+func New(endpoint string) *Server {
 	return &Server{
 		endpoint: endpoint,
-		tokenDir: tokenDir,
 	}
 }
 
@@ -120,7 +120,6 @@ func (srv *Server) AuthenticationAccount(username, password string) error {
 
 	token := string(body)
 
-	// todo => save token to cache directory
 	err = srv.saveToken(token)
 	if err != nil {
 		return err
@@ -204,20 +203,25 @@ func (srv *Server) RetrieveRepo(username, name string) (*models.Repo, error) {
 	return repo, nil
 }
 
-func (srv *Server) CreateNewRepo(username, name string) (string, error) {
+func (srv *Server) CreateNewRepo(repo string) (string, error) {
 	token, err := srv.retrieveToken()
 	if err != nil {
 		return "", err
 	}
 
-	url, err := url.JoinPath(endpoint, "/repos/", username, name)
+	user, err := srv.RetrieveUser()
+	if err != nil {
+		return "", err
+	}
+
+	url, err := url.JoinPath(endpoint, "/repos/", user.Username, repo)
 	if err != nil {
 		return "", err
 	}
 
 	secret := ""
 	data := map[string]string{
-		"Name":   name,
+		"Name":   repo,
 		"Secret": secret,
 	}
 
@@ -246,11 +250,62 @@ func (srv *Server) CreateNewRepo(username, name string) (string, error) {
 	return string(body), nil
 }
 
-func PushRepo(username, name string) error {
+func (srv *Server) PushRepo(repo, filepath string) error {
+	url, err := url.JoinPath(srv.endpoint, repo)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	file, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile("file", "envi.zip")
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return err
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+
+	request, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	client := &http.Client{}
+	res, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == 200 {
+		return nil
+	}
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	return errors.New(string(data))
 }
 
 func PullRepo(username, name string) (io.ReadCloser, error) {
+
 	return nil, nil
 }
