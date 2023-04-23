@@ -32,7 +32,7 @@ func (srv *server) handleSignup(w http.ResponseWriter, r *http.Request, _ httpro
 		return
 	}
 
-	srv.send(w, 201, user)
+	srv.send(w, http.StatusCreated, user)
 }
 
 func (srv *server) handleLogin(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -233,6 +233,11 @@ func (srv *server) handlePush(w http.ResponseWriter, r *http.Request, params htt
 	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
 	if err != mongo.ErrNoDocuments {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if repo.TreeId != r.Header.Get("Repo-Tree-Id") {
+		http.Error(w, "invalid hearder: repo tree id is invalid and doesn't match head", http.StatusBadRequest)
 		return
 	}
 
