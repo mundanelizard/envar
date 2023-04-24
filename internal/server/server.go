@@ -314,7 +314,18 @@ func (srv *Server) PushRepo(repo, treeId, filepath, secret string) error {
 	return errors.New(string(data))
 }
 
-func PullRepo(username, name string) (io.ReadCloser, error) {
+func (srv *Server) PullRepo(repo string) (string, error) {
 
-	return nil, nil
+	return "", nil
+}
+
+
+func (srv *Server) ShareRepo(repo, user, role string) error {
+
+	return nil
+}
+
+func (srv *Server) RevokeRepo(repo, user string) error {
+	
+	return nil
 }

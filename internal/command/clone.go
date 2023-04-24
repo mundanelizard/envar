@@ -2,21 +2,20 @@ package command
 
 import (
 	"errors"
-	"os"
 	"path"
 
 	"github.com/mundanelizard/envi/internal/command/helpers"
 	"github.com/mundanelizard/envi/pkg/cli"
 )
 
-func Pull() *cli.Command {
+func Clone() *cli.Command {
 	return &cli.Command{
 		Name:   "pull",
-		Action: handlePull,
+		Action: handleClone,
 	}
 }
 
-func handlePull(values *cli.ActionArgs, args []string) {
+func handleClone(values *cli.ActionArgs, args []string) {
 	// check if user is authenticated
 	_, err := srv.RetrieveUser()
 	if err != nil {
@@ -30,14 +29,10 @@ func handlePull(values *cli.ActionArgs, args []string) {
 	}
 
 	secret, _ := values.GetString("secret")
-	repo, err := os.ReadFile(path.Join(wd, ".envi", "remote"))
-	if err != nil {
-		logger.Fatal(err)
-		return
-	}
+	repo := args[0]
 
 	// download the latest file from the server
-	encDir, err := srv.PullRepo(string(repo))
+	encDir, err := srv.PullRepo(repo)
 	if err != nil {
 		logger.Fatal(err)
 		return
@@ -50,16 +45,9 @@ func handlePull(values *cli.ActionArgs, args []string) {
 		return
 	}
 
-	repoName := path.Base(string(repo))
+	repoName := path.Base(repo)
 	dest := path.Join(wd, repoName)
 
-	// delete current directory
-	err = os.RemoveAll(dest)
-	if err != nil {
-		logger.Error(nil)
-	}
-
-	// uncompressing file to the current destination
 	err = helpers.UncompressEnvironment(comDir, dest)
 	if err != nil {
 		logger.Fatal(err)
@@ -72,4 +60,8 @@ func handlePull(values *cli.ActionArgs, args []string) {
 		logger.Fatal(err)
 		return
 	}
+}
+
+func populateEnvironment() error {
+	return nil
 }
