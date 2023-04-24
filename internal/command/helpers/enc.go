@@ -67,5 +67,39 @@ func encryptCompressedEnvironment(dir, secret string) (string, error) {
 }
 
 func DecryptCompressedEnvironment(dir, secret string) (string, error) {
-	return "", nil
+	key := []byte(secret)
+	aesCipher, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	encryptedFile, err := os.Open(dir)
+	if err != nil {
+		return "", err
+	}
+	defer encryptedFile.Close()
+
+	content, err := io.ReadAll(encryptedFile)
+	if err != nil {
+		return "", err
+	}
+
+	plainText := make([]byte, len(content))
+	iv := make([]byte, aes.BlockSize)
+	cipher.NewCFBDecrypter(aesCipher, iv).XORKeyStream(plainText, content)
+
+	outDir := dir + ".zip"
+
+	decryptedFile, err := os.Create(outDir)
+	if err != nil {
+		return "", nil
+	}
+	defer decryptedFile.Close()
+
+	_, err = decryptedFile.Write(plainText)
+	if err != nil {
+		return "", nil
+	}
+
+	return outDir, nil
 }

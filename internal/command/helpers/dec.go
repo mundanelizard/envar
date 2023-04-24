@@ -8,7 +8,38 @@ import (
 	"path/filepath"
 )
 
-func UncompressEnvironment(zip, dest string) error {
+func UncompressEnvironment(zipDir, dest string) error {
+	zipFile, err := zip.OpenReader(zipDir)
+	if err != nil {
+		return err
+	}
+	defer zipFile.Close()
+
+	for _, file := range zipFile.File {
+		filePath := filepath.Join(dest, file.Name)
+		if file.FileInfo().IsDir() {
+			os.MkdirAll(filePath, file.Mode())
+			continue
+		}
+
+		fileReader, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer fileReader.Close()
+
+		targeFile, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, file.Mode())
+		if err != nil {
+			return nil
+		}
+		defer targeFile.Close()
+
+		_, err = io.Copy(targeFile, fileReader)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
