@@ -72,4 +72,16 @@ func handlePull(values *cli.ActionArgs, args []string) {
 		logger.Fatal(err)
 		return
 	}
+
+	err = os.Remove(encDir)
+	if err != nil {
+		logger.Fatal(err)
+		return 
+	}
+
+	err = os.Remove(comDir)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
 }

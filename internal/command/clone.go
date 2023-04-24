@@ -2,6 +2,7 @@ package command
 
 import (
 	"errors"
+	"os"
 	"path"
 
 	"github.com/mundanelizard/envi/internal/command/helpers"
@@ -56,6 +57,18 @@ func handleClone(values *cli.ActionArgs, args []string) {
 
 	// replace the current directory with the current file
 	err = populateEnvironment()
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+
+	err = os.Remove(encDir)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+
+	err = os.Remove(comDir)
 	if err != nil {
 		logger.Fatal(err)
 		return
