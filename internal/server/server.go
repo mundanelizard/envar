@@ -43,7 +43,7 @@ func (srv *Server) CreateAccount(username, password string) error {
 		return err
 	}
 
-	url, err := url.JoinPath(srv.endpoint, "/repos/")
+	url, err := url.JoinPath(srv.endpoint, "/users/")
 	if err != nil {
 		return err
 	}
@@ -80,13 +80,13 @@ func (srv *Server) CreateAccount(username, password string) error {
 	return nil
 }
 
-func (srv *Server) AuthenticationAccount(username, password string) error {
+func (srv *Server) AuthenticateAccount(username, password string) error {
 	err := validUserDetail(username, password)
 	if err != nil {
 		return err
 	}
 
-	url, err := url.JoinPath(endpoint, "/repos/")
+	url, err := url.JoinPath(endpoint, "/users/login")
 	if err != nil {
 		return err
 	}
