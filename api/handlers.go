@@ -223,8 +223,11 @@ func (srv *server) handlePull(w http.ResponseWriter, r *http.Request, params htt
 
 	var repo models.Repo
 	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
-	if err != mongo.ErrNoDocuments {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err == mongo.ErrNoDocuments {
+		http.Error(w, "repository doesn't exists", http.StatusBadRequest)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

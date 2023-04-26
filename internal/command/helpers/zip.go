@@ -9,6 +9,10 @@ import (
 )
 
 func DecompressEnvironment(zipDir, dest string) error {
+	err := os.MkdirAll(dest, 0655)
+	if err != nil {
+		return err
+	}
 	zipFile, err := zip.OpenReader(zipDir)
 	if err != nil {
 		return err
@@ -17,9 +21,11 @@ func DecompressEnvironment(zipDir, dest string) error {
 
 	for _, file := range zipFile.File {
 		filePath := filepath.Join(dest, file.Name)
-		if file.FileInfo().IsDir() {
-			os.MkdirAll(filePath, file.Mode())
-			continue
+
+		dir := filepath.Dir(filePath)
+		err = os.MkdirAll(dir, file.Mode())
+		if err != nil && !os.IsExist(err) {
+			return err
 		}
 
 		fileReader, err := file.Open()
@@ -27,18 +33,25 @@ func DecompressEnvironment(zipDir, dest string) error {
 			return err
 		}
 
-		targeFile, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, file.Mode())
-		if err != nil {
-			return nil
-		}
-
-		_, err = io.Copy(targeFile, fileReader)
+		targetFile, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, file.Mode())
 		if err != nil {
 			return err
 		}
 
-		targeFile.Close()
-		fileReader.Close()
+		_, err = io.Copy(targetFile, fileReader)
+		if err != nil {
+			return err
+		}
+
+		err = targetFile.Close()
+		if err != nil {
+			return err
+		}
+
+		err = fileReader.Close()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

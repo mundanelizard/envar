@@ -6,6 +6,7 @@ import (
 	"github.com/mundanelizard/envi/internal/lockfile"
 	"io"
 	"os"
+	"strings"
 )
 
 func encryptCompressedEnvironment(dir, secret string) (string, error) {
@@ -72,7 +73,7 @@ func DecryptCompressedEnvironment(dir, secret string) (string, error) {
 	iv := make([]byte, aes.BlockSize)
 	cipher.NewCFBDecrypter(aesCipher, iv).XORKeyStream(plainText, content)
 
-	outDir := dir + ".zip"
+	outDir := strings.ReplaceAll(dir, ".enc", "")
 
 	decryptedFile, err := os.Create(outDir)
 	if err != nil {

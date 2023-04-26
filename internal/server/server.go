@@ -358,8 +358,13 @@ func (srv *Server) PullRepo(repo string) (string, error) {
 		return "", err
 	}
 
+	if res.StatusCode != 200 {
+		return "", errors.New(string(body))
+	}
+
 	tempDir := os.TempDir()
-	dir := path.Join(tempDir, path.Base(repo)+".envi.download")
+	fileName := path.Base(repo) + ".envi.zip.enc"
+	dir := path.Join(tempDir, fileName)
 
 	err = lockfile.WriteWithLock(dir, body)
 	if err != nil {

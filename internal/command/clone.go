@@ -1,7 +1,6 @@
 package command
 
 import (
-	"errors"
 	"os"
 	"path"
 
@@ -10,27 +9,34 @@ import (
 )
 
 func Clone() *cli.Command {
+	secret := &cli.StringFlag{
+		Value: "",
+		Flag: cli.Flag{
+			Name:     "secret",
+			Usage:    "Repository secret to use when encrypting the codebase - ie `envi pull -secret='SECRET'`",
+			Required: true,
+		},
+	}
+
+	repo := &cli.StringFlag{
+		Value: "",
+		Flag: cli.Flag{
+			Name:     "repo",
+			Usage:    "Repository secret to use when encrypting the codebase - ie `envi pull -repo='repo-path'`",
+			Required: true,
+		},
+	}
+
 	return &cli.Command{
-		Name:   "pull",
+		Name:   "clone",
 		Action: handleClone,
+		Flags:  []cli.Flagger{secret, repo},
 	}
 }
 
-func handleClone(values *cli.ActionArgs, args []string) {
-	// check if user is authenticated
-	_, err := srv.RetrieveUser()
-	if err != nil {
-		logger.Fatal(err)
-		return
-	}
-
-	if len(args) != 2 {
-		logger.Fatal(errors.New("expected args of length 1"))
-		return
-	}
-
+func handleClone(values *cli.ActionArgs, _ []string) {
 	secret, _ := values.GetString("secret")
-	repo := args[0]
+	repo, _ := values.GetString("repo")
 
 	// download the latest file from the server
 	encDir, err := srv.PullRepo(repo)
@@ -47,7 +53,7 @@ func handleClone(values *cli.ActionArgs, args []string) {
 	}
 
 	repoName := path.Base(repo)
-	dest := path.Join(wd, repoName)
+	dest := path.Join(wd, repoName, ".envi")
 
 	err = helpers.DecompressEnvironment(comDir, dest)
 	if err != nil {
@@ -56,7 +62,7 @@ func handleClone(values *cli.ActionArgs, args []string) {
 	}
 
 	// replace the current directory with the current file
-	err = populateEnvironment()
+	err = populateEnvironment(dest)
 	if err != nil {
 		logger.Fatal(err)
 		return
@@ -75,6 +81,6 @@ func handleClone(values *cli.ActionArgs, args []string) {
 	}
 }
 
-func populateEnvironment() error {
+func populateEnvironment(_ string) error {
 	return nil
 }
