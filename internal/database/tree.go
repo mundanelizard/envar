@@ -110,11 +110,10 @@ func (t *Tree) String() string {
 
 	for _, name := range keys {
 		e := t.entries[name]
-		_, err := fmt.Fprintf(&buf, "%s %s\x00", e.Mode(), name)
+		_, err := fmt.Fprintf(&buf, "%s %s %s\n", e.Mode(), name, e.Id())
 		if err != nil {
 			panic(err)
 		}
-		buf.Write(hexDecode(e.Id()))
 	}
 
 	return buf.String()

@@ -2,8 +2,13 @@ package command
 
 import (
 	"fmt"
+	"github.com/mundanelizard/envi/internal/database"
+	"github.com/mundanelizard/envi/internal/lockfile"
+	"github.com/mundanelizard/envi/internal/refs"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/mundanelizard/envi/internal/command/helpers"
 	"github.com/mundanelizard/envi/pkg/cli"
@@ -84,6 +89,125 @@ func handleClone(values *cli.ActionArgs, _ []string) {
 	fmt.Println("Successfully pulled latest branch from remote.")
 }
 
-func populateEnvironment(_ string) error {
+type tree struct {
+	id   string
+	path string
+}
+
+func populateEnvironment(envDir string) error {
+	db := database.New(path.Join(envDir, "objects"))
+	rs := refs.New(path.Join(envDir, "refs"))
+
+	// retrieving the previous commit id
+	pid, err := rs.Read()
+	if err != nil {
+		return err
+	}
+
+	if len(pid) == 0 {
+		return nil
+	}
+
+	data, err := db.Read(pid)
+	if err != nil {
+		return err
+	}
+
+	commit, err := database.NewCommitFromByteArray(pid, data)
+	initialTree := tree{
+		id:   commit.TreeId(),
+		path: filepath.Dir(envDir),
+	}
+	trees := []tree{initialTree}
+
+	for len(trees) != 0 {
+		t := trees[0]
+		trees = trees[1:]
+
+		// read current tree
+		data, err := db.Read(t.id)
+		if err != nil {
+			return err
+		}
+
+		err = os.MkdirAll(t.path, 0655)
+		if err != nil && !os.IsExist(err) {
+			return nil
+		}
+
+		entries, err := extractEntriesFromTree(data)
+
+		for _, entry := range entries {
+			p := path.Join(t.path, entry.name)
+
+			if entry.t == "tree" {
+				t = tree{
+					id:   entry.id,
+					path: p,
+				}
+				trees = append(trees, t)
+				continue
+			}
+
+			data, err := db.Read(entry.id)
+			if err != nil {
+				return err
+			}
+
+			content := string(data)
+			content = strings.Join(strings.Split(content, "\x00")[1:], "")
+
+			err = lockfile.WriteWithLock(p, []byte(content))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
+}
+
+type treeEntry struct {
+	id   string
+	t    string
+	name string
+}
+
+func extractEntriesFromTree(raw []byte) ([]treeEntry, error) {
+	data := string(raw)
+
+	chunks := strings.Split(data, "\x00")
+
+	// clean data
+	data = strings.Join(chunks[1:], "")
+
+	chunks = strings.Split(data, "\n")
+
+	var entries []treeEntry
+
+	for _, chunk := range chunks {
+		if len(chunk) == 0 {
+			continue
+		}
+
+		columns := strings.Split(chunk, " ")
+
+		t := "blob"
+		name := columns[1]
+		id := columns[2]
+
+		if columns[0] != "100644" {
+			t = "tree"
+		}
+
+		entry := treeEntry{
+			t:    t,
+			id:   id,
+			name: name,
+		}
+
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
 }

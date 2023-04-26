@@ -75,7 +75,7 @@ func handleCommit(values *cli.ActionArgs, args []string) {
 		return
 	}
 
-	// retreiving the user data
+	// retrieving the user data
 	user, err := srv.RetrieveUser()
 	if err != nil {
 		logger.Fatal(err)
