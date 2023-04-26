@@ -9,11 +9,11 @@ type User struct {
 }
 
 func IsValidUser(user User) error {
-	if len(user.Username) != 0 {
+	if len(user.Username) == 0 {
 		return errors.New("expected an email or unique identifier")
 	}
 
-	if len(user.Password) != 0 {
+	if len(user.Password) == 0 {
 		return errors.New("expected an password or unique identifier")
 	}
 

@@ -33,8 +33,8 @@ func (srv *server) handleSignup(w http.ResponseWriter, r *http.Request, _ httpro
 	}
 
 	data := map[string]interface{}{
-		"Username": user.Username,
-		"Password": crypto.HashPassword(user.Password),
+		"username": user.Username,
+		"password": crypto.HashPassword(user.Password),
 	}
 
 	_, err = srv.db.Collection("users").InsertOne(srv.ctx, data)
@@ -58,14 +58,20 @@ func (srv *server) handleLogin(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
+	fmt.Println(req.Username)
+	fmt.Println(req.Password)
+
 	var user models.User
 	err = srv.db.Collection("users").FindOne(srv.ctx, map[string]string{"username": req.Username}).Decode(&user)
+
 	if err == mongo.ErrNoDocuments {
 		http.Error(w, "invalid username or password", http.StatusBadRequest)
 		return
 	} else if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+
+	fmt.Println("I got here")
 
 	if !crypto.VerifyPassword(req.Password, user.Password) {
 		http.Error(w, "invalid username or password", http.StatusBadRequest)

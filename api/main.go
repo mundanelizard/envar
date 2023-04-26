@@ -27,6 +27,8 @@ func main() {
 		ctx:    context.Background(),
 	}
 
+	srv.config.port = 6000
+
 	db, err := loadDb()
 	if err != nil {
 		srv.logger.Fatal(err)

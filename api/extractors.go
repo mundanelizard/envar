@@ -110,7 +110,7 @@ func (srv *server) extractUserFromHeaderToken(header http.Header) (*models.User,
 
 	var user models.User
 	query = map[string]string{"_id": secret.OwnerId}
-	err = srv.db.Collection("user").FindOne(srv.ctx, query).Decode(&user)
+	err = srv.db.Collection("users").FindOne(srv.ctx, query).Decode(&user)
 	if err != nil {
 		srv.logger.Warn(err.Error())
 		return nil, ErrUnauthorised
