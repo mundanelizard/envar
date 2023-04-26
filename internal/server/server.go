@@ -407,7 +407,7 @@ func (srv *Server) ShareRepo(repo, user, role string) error {
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
+	if res.StatusCode == 200 {
 		return nil
 	}
 
@@ -419,7 +419,7 @@ func (srv *Server) ShareRepo(repo, user, role string) error {
 	return errors.New(string(body))
 }
 
-func (srv *Server) RevokeRepo(repo, user string) error {
+func (srv *Server) RevokeRepo(repo, user, role string) error {
 	token, err := srv.retrieveToken()
 	if err != nil {
 		return err
@@ -432,6 +432,7 @@ func (srv *Server) RevokeRepo(repo, user string) error {
 
 	data := map[string]string{
 		"Username": user,
+		"Role":     role,
 	}
 
 	body, err := json.Marshal(data)
@@ -451,7 +452,7 @@ func (srv *Server) RevokeRepo(repo, user string) error {
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
+	if res.StatusCode == 200 {
 		return nil
 	}
 

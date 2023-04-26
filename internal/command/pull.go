@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -82,4 +83,6 @@ func handlePull(values *cli.ActionArgs, _ []string) {
 		logger.Fatal(err)
 		return
 	}
+
+	fmt.Println("Successfully pulled latest branch from remote.")
 }

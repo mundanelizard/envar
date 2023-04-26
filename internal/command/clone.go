@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -79,6 +80,8 @@ func handleClone(values *cli.ActionArgs, _ []string) {
 		logger.Fatal(err)
 		return
 	}
+
+	fmt.Println("Successfully pulled latest branch from remote.")
 }
 
 func populateEnvironment(_ string) error {

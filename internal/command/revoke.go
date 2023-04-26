@@ -13,7 +13,16 @@ func Revoke() *cli.Command {
 		Value: "",
 		Flag: cli.Flag{
 			Name:     "user",
-			Usage:    "Share user is required - ie 'envi share -user='username'",
+			Usage:    "Share user is required - ie 'envi revoke -user='username'",
+			Required: true,
+		},
+	}
+
+	role := &cli.StringFlag{
+		Value: "",
+		Flag: cli.Flag{
+			Name:     "role",
+			Usage:    "Share role is required - ie 'envi revoke -role='R'",
 			Required: true,
 		},
 	}
@@ -21,7 +30,7 @@ func Revoke() *cli.Command {
 	return &cli.Command{
 		Name:   "revoke",
 		Action: handleRevoke,
-		Flags:  []cli.Flagger{user},
+		Flags:  []cli.Flagger{user, role},
 	}
 }
 
@@ -33,8 +42,9 @@ func handleRevoke(values *cli.ActionArgs, args []string) {
 	}
 
 	user, _ := values.GetString("user")
+	role, _ := values.GetString("role")
 
-	err = srv.RevokeRepo(string(repo), user)
+	err = srv.RevokeRepo(string(repo), user, role)
 
 	if err != nil {
 		logger.Fatal(err)

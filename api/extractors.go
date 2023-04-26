@@ -82,7 +82,7 @@ func (srv *server) extractShareRepoFromBody(reader io.Reader) (*ShareRepo, error
 
 	var user models.User
 	query := map[string]string{"username": repo.Username}
-	err = srv.db.Collection("user").FindOne(srv.ctx, query).Decode(&user)
+	err = srv.db.Collection("users").FindOne(srv.ctx, query).Decode(&user)
 	if err != nil {
 		srv.logger.Warn(err.Error())
 		return nil, errors.New("invalid username: user doesn't exist please check the username and retry")

@@ -154,7 +154,7 @@ func (srv *server) handleGetRepos(w http.ResponseWriter, r *http.Request, _ http
 
 	for cur.Next(srv.ctx) {
 		var repo models.Repo
-		err := cur.Decode(&repo)
+		err = cur.Decode(&repo)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -162,12 +162,16 @@ func (srv *server) handleGetRepos(w http.ResponseWriter, r *http.Request, _ http
 		results = append(results, repo)
 	}
 
-	if err := cur.Err(); err != nil {
+	if err = cur.Err(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	cur.Close(srv.ctx)
+	err = cur.Close(srv.ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	srv.send(w, http.StatusOK, results)
 }
@@ -338,7 +342,7 @@ func (srv *server) handleShareRepo(w http.ResponseWriter, r *http.Request, param
 
 	username := params.ByName("user")
 	repoName := params.ByName("repo")
-	key := username + "-" + repoName
+	key := repoName + "-" + username
 
 	share, err := srv.extractShareRepoFromBody(r.Body)
 	if err != nil {
@@ -352,12 +356,6 @@ func (srv *server) handleShareRepo(w http.ResponseWriter, r *http.Request, param
 	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
 	if err != nil {
 		http.Error(w, "invalid header: can not find repository", http.StatusBadRequest)
-		return
-	}
-
-	secret := r.Header.Get("Repo-Secret")
-	if !crypto.VerifyPassword(secret, repo.Secret) {
-		http.Error(w, "invalid header: secret is invalid and doesn't match db content", http.StatusBadRequest)
 		return
 	}
 
@@ -398,7 +396,7 @@ func (srv *server) handleRemoveAccess(w http.ResponseWriter, r *http.Request, pa
 
 	username := params.ByName("user")
 	repoName := params.ByName("repo")
-	key := username + "-" + repoName
+	key := repoName + "-" + username
 
 	query := map[string]string{"owner_id": user.Id, "name": key}
 
@@ -406,12 +404,6 @@ func (srv *server) handleRemoveAccess(w http.ResponseWriter, r *http.Request, pa
 	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
 	if err != nil {
 		http.Error(w, "invalid header: can not find repository", http.StatusBadRequest)
-		return
-	}
-
-	secret := r.Header.Get("Repo-Secret")
-	if !crypto.VerifyPassword(secret, repo.Secret) {
-		http.Error(w, "invalid header: secret is invalid and doesn't match db content", http.StatusBadRequest)
 		return
 	}
 
