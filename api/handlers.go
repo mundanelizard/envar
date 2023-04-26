@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/mundanelizard/envi/internal/crypto"
 	"io"
 	"net/http"
 	"os"
@@ -24,9 +26,18 @@ func (srv *server) handleSignup(w http.ResponseWriter, r *http.Request, _ httpro
 		return
 	}
 
-	user.Password = hashPassword(user.Password)
+	err = srv.db.Collection("users").FindOne(srv.ctx, map[string]string{"username": user.Username}).Decode(&user)
+	if err != mongo.ErrNoDocuments {
+		http.Error(w, "user already exists in database", http.StatusBadRequest)
+		return
+	}
 
-	_, err = srv.db.Collection("users").InsertOne(srv.ctx, user)
+	data := map[string]interface{}{
+		"Username": user.Username,
+		"Password": crypto.HashPassword(user.Password),
+	}
+
+	_, err = srv.db.Collection("users").InsertOne(srv.ctx, data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -49,17 +60,19 @@ func (srv *server) handleLogin(w http.ResponseWriter, r *http.Request, _ httprou
 
 	var user models.User
 	err = srv.db.Collection("users").FindOne(srv.ctx, map[string]string{"username": req.Username}).Decode(&user)
-	if err != mongo.ErrNoDocuments {
-		http.Error(w, "user already exists in database", http.StatusBadRequest)
+	if err == mongo.ErrNoDocuments {
+		http.Error(w, "invalid username or password", http.StatusBadRequest)
 		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	if !verifyPassword(req.Password, user.Password) {
+	if !crypto.VerifyPassword(req.Password, user.Password) {
 		http.Error(w, "invalid username or password", http.StatusBadRequest)
 		return
 	}
 
-	token := genRandomString()
+	token := crypto.GenRandomString()
 	secret := models.Secret{
 		OwnerId: user.Id,
 		Token:   token,
@@ -72,6 +85,16 @@ func (srv *server) handleLogin(w http.ResponseWriter, r *http.Request, _ httprou
 	}
 
 	srv.send(w, 200, token)
+}
+
+func (srv *server) handleGetUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	user, err := srv.extractUserFromHeaderToken(r.Header)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	srv.send(w, http.StatusOK, user)
 }
 
 func (srv *server) handleCreateRepo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -108,9 +131,7 @@ func (srv *server) handleCreateRepo(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
-	srv.send(w, 200, map[string]interface{}{
-		"repo": repo,
-	})
+	srv.send(w, http.StatusOK, fmt.Sprintf("/repos/%s/%s", user.Username, body.Name))
 }
 
 func (srv *server) handleGetRepos(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -239,7 +260,7 @@ func (srv *server) handlePush(w http.ResponseWriter, r *http.Request, params htt
 	}
 
 	secret := r.Header.Get("Repo-Secret")
-	if !verifyPassword(secret, repo.Secret) {
+	if !crypto.VerifyPassword(secret, repo.Secret) {
 		http.Error(w, "invalid header: secret is invalid and doesn't match db content", http.StatusBadRequest)
 		return
 	}
@@ -297,7 +318,7 @@ func (srv *server) handleShareRepo(w http.ResponseWriter, r *http.Request, param
 	}
 
 	secret := r.Header.Get("Repo-Secret")
-	if !verifyPassword(secret, repo.Secret) {
+	if !crypto.VerifyPassword(secret, repo.Secret) {
 		http.Error(w, "invalid header: secret is invalid and doesn't match db content", http.StatusBadRequest)
 		return
 	}
@@ -351,7 +372,7 @@ func (srv *server) handleRemoveAccess(w http.ResponseWriter, r *http.Request, pa
 	}
 
 	secret := r.Header.Get("Repo-Secret")
-	if !verifyPassword(secret, repo.Secret) {
+	if !crypto.VerifyPassword(secret, repo.Secret) {
 		http.Error(w, "invalid header: secret is invalid and doesn't match db content", http.StatusBadRequest)
 		return
 	}

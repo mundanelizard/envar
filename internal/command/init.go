@@ -28,12 +28,6 @@ func Init() *cli.Command {
 }
 
 func handleInit(_ *cli.ActionArgs, args []string) {
-	_, err := srv.RetrieveUser()
-	if err != nil {
-		logger.Fatal(err)
-		return
-	}
-
 	cwd := wd
 	if len(args) == 1 {
 		cwd = path.Join(cwd, args[0])
@@ -58,6 +52,8 @@ func handleInit(_ *cli.ActionArgs, args []string) {
 	repoName := path.Base(cwd)
 	endpoint, err := srv.CreateNewRepo(repoName)
 	if err != nil {
+		_, err = logger.Error(err)
+		err = os.RemoveAll(enviDir)
 		logger.Fatal(err)
 		return
 	}

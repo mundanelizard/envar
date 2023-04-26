@@ -42,5 +42,5 @@ func handleSignup(values *cli.ActionArgs, args []string) {
 		return
 	}
 
-	fmt.Println("Successfully logged to into account")
+	fmt.Println("Account creation was successful!")
 }

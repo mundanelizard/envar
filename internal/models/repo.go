@@ -12,5 +12,5 @@ type Repo struct {
 	Secret       string        `bson:"secret"`
 	CommitId     string        `bson:"commit_id"`
 	TreeId       string        `json:"-" bson:"tree_id"`
-	Contributors []Contributor `bson:"contibutors"`
+	Contributors []Contributor `bson:"contributors"`
 }

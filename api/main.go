@@ -16,15 +16,15 @@ type server struct {
 	config struct {
 		port int
 	}
-	wg sync.WaitGroup
-	db *mongo.Database
+	wg  sync.WaitGroup
+	db  *mongo.Database
 	ctx context.Context
 }
 
 func main() {
 	srv := &server{
 		logger: logger.New(os.Stdout, logger.Info),
-		ctx: context.Background(),
+		ctx:    context.Background(),
 	}
 
 	db, err := loadDb()
@@ -41,7 +41,7 @@ func main() {
 }
 
 func loadDb() (*mongo.Database, error) {
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://127.0.0.1:27017"))
 	if err != nil {
 		return nil, err
 	}
@@ -51,9 +51,8 @@ func loadDb() (*mongo.Database, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer client.Disconnect(ctx)
 
-	db := client.Database("mydb")
+	db := client.Database("envi")
 
 	return db, nil
 }

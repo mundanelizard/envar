@@ -42,5 +42,5 @@ func handleLogin(values *cli.ActionArgs, args []string) {
 		return
 	}
 
-	fmt.Println("Successfully logged to into account")
+	fmt.Println("Login was successful!")
 }

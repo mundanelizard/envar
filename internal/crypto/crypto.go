@@ -18,7 +18,7 @@ func generateSalt() ([]byte, error) {
 	return salt, nil
 }
 
-func hashPassword(password string) (string, error) {
+func GenHash(password string) (string, error) {
 	salt, err := generateSalt()
 	if err != nil {
 		return "", err
@@ -28,7 +28,7 @@ func hashPassword(password string) (string, error) {
 	return hex.EncodeToString(salt) + hex.EncodeToString(hash[:]), nil
 }
 
-func verifyPassword(password string, hashedPassword string) error {
+func VerifyHash(password string, hashedPassword string) error {
 	salt, err := hex.DecodeString(hashedPassword[:saltSize*2])
 	if err != nil {
 		return err

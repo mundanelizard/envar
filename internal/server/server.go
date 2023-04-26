@@ -4,18 +4,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/mundanelizard/envi/internal/crypto"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/mundanelizard/envi/internal/lockfile"
 	"github.com/mundanelizard/envi/internal/models"
 )
-
-var endpoint = "http://localhost:5000/"
 
 type Server struct {
 	endpoint string
@@ -86,7 +86,7 @@ func (srv *Server) AuthenticateAccount(username, password string) error {
 		return err
 	}
 
-	url, err := url.JoinPath(endpoint, "/users/login")
+	url, err := url.JoinPath(srv.endpoint, "/users/login")
 	if err != nil {
 		return err
 	}
@@ -121,6 +121,7 @@ func (srv *Server) AuthenticateAccount(username, password string) error {
 	}
 
 	token := string(body)
+	token = strings.ReplaceAll(token, "\"", "")
 
 	err = srv.saveToken(token)
 	if err != nil {
@@ -136,7 +137,7 @@ func (srv *Server) RetrieveUser() (*models.User, error) {
 		return nil, err
 	}
 
-	url, err := url.JoinPath(endpoint, "/users/me")
+	url, err := url.JoinPath(srv.endpoint, "/users/me")
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +175,7 @@ func (srv *Server) RetrieveRepo(username, name string) (*models.Repo, error) {
 		return nil, err
 	}
 
-	url, err := url.JoinPath(endpoint, "/repos/", username, name)
+	url, err := url.JoinPath(srv.endpoint, "/repos/", username, name)
 	if err != nil {
 		return nil, err
 	}
@@ -211,20 +212,20 @@ func (srv *Server) CreateNewRepo(repo string) (string, error) {
 		return "", err
 	}
 
-	user, err := srv.RetrieveUser()
+	url, err := url.JoinPath(srv.endpoint, "/repos/")
 	if err != nil {
 		return "", err
 	}
 
-	url, err := url.JoinPath(endpoint, "/repos/", user.Username, repo)
+	secret := crypto.GenRandomString()
+	hash, err := crypto.GenHash(secret)
 	if err != nil {
 		return "", err
 	}
 
-	secret := ""
 	data := map[string]string{
 		"Name":   repo,
-		"Secret": secret,
+		"Secret": hash,
 	}
 
 	body, err := json.Marshal(data)
@@ -247,6 +248,10 @@ func (srv *Server) CreateNewRepo(repo string) (string, error) {
 	body, err = io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
+	}
+
+	if res.StatusCode != 201 {
+		return "", errors.New(string(body))
 	}
 
 	return string(body), nil
@@ -322,7 +327,7 @@ func (srv *Server) PullRepo(repo string) (string, error) {
 		return "", err
 	}
 
-	url, err := url.JoinPath(endpoint, repo)
+	url, err := url.JoinPath(srv.endpoint, repo)
 	if err != nil {
 		return "", err
 	}
@@ -361,7 +366,7 @@ func (srv *Server) ShareRepo(repo, user, role string) error {
 		return err
 	}
 
-	url, err := url.JoinPath(endpoint, repo, "share")
+	url, err := url.JoinPath(srv.endpoint, repo, "share")
 	if err != nil {
 		return err
 	}
@@ -406,7 +411,7 @@ func (srv *Server) RevokeRepo(repo, user string) error {
 		return err
 	}
 
-	url, err := url.JoinPath(endpoint, repo, "revoke")
+	url, err := url.JoinPath(srv.endpoint, repo, "revoke")
 	if err != nil {
 		return err
 	}

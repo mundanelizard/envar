@@ -9,7 +9,7 @@ import (
 
 var logger = log.New(os.Stdout, log.Info)
 var wd string
-var srv = server.New("https://localhost:9000/")
+var srv = server.New("https://localhost:6000/")
 
 func loadWd() {
 	var err error

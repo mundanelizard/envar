@@ -5,7 +5,7 @@ import "errors"
 type User struct {
 	Id       string `bson:"_id"`
 	Username string `bson:"username"`
-	Password string `json:"-" bson:"password"`
+	Password string `bson:"password"`
 }
 
 func IsValidUser(user User) error {

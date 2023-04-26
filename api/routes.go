@@ -11,6 +11,8 @@ func (srv *server) routes() http.Handler {
 	router.POST("/users/", srv.handleSignup)
 	router.POST("/users/login", srv.handleLogin)
 
+	router.GET("/users/me", srv.handleGetUser)
+
 	router.POST("/repos/", srv.handleCreateRepo)
 
 	router.GET("/repos/:user/", srv.handleGetRepos)
@@ -20,7 +22,7 @@ func (srv *server) routes() http.Handler {
 	router.POST("/repos/:user/:repo/push", srv.handlePush)
 
 	router.POST("/repos/:user/:repo/share", srv.handleShareRepo)
-	router.POST("repos/:user/:repo/revoke", srv.handleRemoveAccess)
+	router.POST("/repos/:user/:repo/revoke", srv.handleRemoveAccess)
 
 	return router
 }

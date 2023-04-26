@@ -1,4 +1,4 @@
-package main
+package crypto
 
 import (
 	"crypto/rand"
@@ -7,10 +7,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func genRandomString() string {
+func GenRandomString() string {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
-	
+
 	if err != nil {
 		panic(err)
 	}
@@ -20,8 +20,7 @@ func genRandomString() string {
 	return s
 }
 
-
-func hashPassword(password string) string {
+func HashPassword(password string) string {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
 		panic(err)
@@ -30,7 +29,7 @@ func hashPassword(password string) string {
 	return string(bytes)
 }
 
-func verifyPassword(password, hash string) bool {
+func VerifyPassword(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
