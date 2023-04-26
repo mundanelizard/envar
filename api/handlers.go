@@ -74,9 +74,9 @@ func (srv *server) handleLogin(w http.ResponseWriter, r *http.Request, _ httprou
 	}
 
 	token := crypto.GenRandomString()
-	secret := models.Secret{
-		OwnerId: user.Id,
-		Token:   token,
+	secret := map[string]string{
+		"owner_id": user.Id,
+		"token":    token,
 	}
 
 	_, err = srv.db.Collection("secrets").InsertOne(srv.ctx, secret)
