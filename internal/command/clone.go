@@ -49,7 +49,7 @@ func handleClone(values *cli.ActionArgs, args []string) {
 	repoName := path.Base(repo)
 	dest := path.Join(wd, repoName)
 
-	err = helpers.UncompressEnvironment(comDir, dest)
+	err = helpers.DecompressEnvironment(comDir, dest)
 	if err != nil {
 		logger.Fatal(err)
 		return

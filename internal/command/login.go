@@ -11,7 +11,7 @@ func Login() *cli.Command {
 		Value: "",
 		Flag: cli.Flag{
 			Name:     "user",
-			Usage:    "Share user is required - ie 'envi signup -user='username'",
+			Usage:    "Share user is required - ie `envi signup -user='username'`",
 			Required: true,
 		},
 	}
@@ -20,7 +20,7 @@ func Login() *cli.Command {
 		Value: "",
 		Flag: cli.Flag{
 			Name:     "password",
-			Usage:    "Share user is required - ie 'envi signup -password='password'",
+			Usage:    "Share user is required - ie `envi signup -password='password'`",
 			Required: true,
 		},
 	}

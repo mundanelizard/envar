@@ -3,26 +3,10 @@ package helpers
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"github.com/mundanelizard/envi/internal/lockfile"
 	"io"
 	"os"
-	"path"
-
-	"github.com/mundanelizard/envi/internal/lockfile"
 )
-
-func CompressAndEncryptRepo(wd, repo, secret string) (string, string, error) {
-	comDir, err := compressEnvironment(wd, string(repo))
-	if err != nil {
-		return "", comDir, err
-	}
-
-	encDir, err := encryptCompressedEnvironment(comDir, secret)
-	if err != nil {
-		return comDir, encDir, err
-	}
-
-	return comDir, encDir, err
-}
 
 func encryptCompressedEnvironment(dir, secret string) (string, error) {
 	in, err := os.Open(dir)
@@ -36,7 +20,7 @@ func encryptCompressedEnvironment(dir, secret string) (string, error) {
 		return "", err
 	}
 
-	outDir := path.Join(dir, ".enc")
+	outDir := dir + ".enc"
 	lock := lockfile.New(outDir)
 	err = lock.Hold()
 	if err != nil {

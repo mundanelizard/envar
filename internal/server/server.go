@@ -170,18 +170,18 @@ func (srv *Server) RetrieveUser() (*models.User, error) {
 	return user, nil
 }
 
-func (srv *Server) RetrieveRepo(username, name string) (*models.Repo, error) {
+func (srv *Server) RetrieveRepo(repoPath string) (*models.Repo, error) {
 	token, err := srv.retrieveToken()
 	if err != nil {
 		return nil, err
 	}
 
-	url, err := url.JoinPath(srv.endpoint, "/repos/", username, name)
+	url, err := url.JoinPath(srv.endpoint, repoPath)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -258,16 +258,16 @@ func (srv *Server) CreateNewRepo(repo string) (string, error) {
 	fmt.Println("Repository secret [Save It]: ", secret)
 	fmt.Println("Repository address: ", repo)
 
-	return string(body), nil
+	return strings.ReplaceAll(string(body), "\"", ""), nil
 }
 
-func (srv *Server) PushRepo(repo, treeId, filepath, secret string) error {
+func (srv *Server) PushRepo(repo, treeId, newTreeId, newCommitId, filepath, secret string) error {
 	token, err := srv.retrieveToken()
 	if err != nil {
 		return err
 	}
 
-	url, err := url.JoinPath(srv.endpoint, repo)
+	url, err := url.JoinPath(srv.endpoint, repo, "push")
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func (srv *Server) PushRepo(repo, treeId, filepath, secret string) error {
 	body := new(bytes.Buffer)
 	writer := multipart.NewWriter(body)
 
-	part, err := writer.CreateFormFile("file", "envi.zip")
+	part, err := writer.CreateFormFile("repo", "envi.zip")
 	if err != nil {
 		return err
 	}
@@ -304,6 +304,8 @@ func (srv *Server) PushRepo(repo, treeId, filepath, secret string) error {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Access-Token", token)
 	req.Header.Set("Repo-Tree-Id", treeId)
+	req.Header.Set("Next-Tree-Id", newTreeId)
+	req.Header.Set("Next-Commit-Id", newCommitId)
 	req.Header.Set("Repo-Secret", secret)
 
 	client := &http.Client{}
@@ -313,16 +315,19 @@ func (srv *Server) PushRepo(repo, treeId, filepath, secret string) error {
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode == 200 {
-		return nil
-	}
-
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
 
-	return errors.New(string(data))
+	if res.StatusCode != 200 {
+		return errors.New(string(data))
+	}
+
+	fmt.Println("Repository secret [Save It]: ", secret)
+	fmt.Println("Repository address: ", repo)
+
+	return nil
 }
 
 func (srv *Server) PullRepo(repo string) (string, error) {
@@ -331,7 +336,7 @@ func (srv *Server) PullRepo(repo string) (string, error) {
 		return "", err
 	}
 
-	url, err := url.JoinPath(srv.endpoint, repo)
+	url, err := url.JoinPath(srv.endpoint, repo, "pull")
 	if err != nil {
 		return "", err
 	}

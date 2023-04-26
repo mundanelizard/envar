@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-func UncompressEnvironment(zipDir, dest string) error {
+func DecompressEnvironment(zipDir, dest string) error {
 	zipFile, err := zip.OpenReader(zipDir)
 	if err != nil {
 		return err
@@ -26,25 +26,27 @@ func UncompressEnvironment(zipDir, dest string) error {
 		if err != nil {
 			return err
 		}
-		defer fileReader.Close()
 
 		targeFile, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, file.Mode())
 		if err != nil {
 			return nil
 		}
-		defer targeFile.Close()
 
 		_, err = io.Copy(targeFile, fileReader)
 		if err != nil {
 			return err
 		}
+
+		targeFile.Close()
+		fileReader.Close()
 	}
 
 	return nil
 }
 
-func compressEnvironment(wd, repo string) (string, error) {
-	zipDir := path.Join(os.TempDir(), path.Base(repo)+".envi.temp.zip")
+func CompressEnvironment(wd, repo string) (string, error) {
+	zipFileName := path.Base(repo) + ".env.zip"
+	zipDir := path.Join(os.TempDir(), zipFileName)
 
 	zipFile, err := os.Create(zipDir)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"path"
 	"sync"
 
 	"github.com/mundanelizard/envi/pkg/logger"
@@ -19,6 +20,9 @@ type server struct {
 	wg  sync.WaitGroup
 	db  *mongo.Database
 	ctx context.Context
+	dir struct {
+		uploads string
+	}
 }
 
 func main() {
@@ -35,6 +39,18 @@ func main() {
 	}
 
 	srv.db = db
+
+	dir, err := os.UserHomeDir()
+	if err != nil {
+		srv.logger.Fatal(err)
+	}
+
+	srv.dir.uploads = path.Join(dir, "envi-server-uploads")
+
+	err = os.MkdirAll(srv.dir.uploads, 0655)
+	if err != nil && !os.IsExist(err) {
+		srv.logger.Fatal(err)
+	}
 
 	err = srv.serve()
 	if err != nil {

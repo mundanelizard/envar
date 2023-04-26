@@ -60,7 +60,7 @@ func handlePull(values *cli.ActionArgs, args []string) {
 	}
 
 	// uncompressing file to the current destination
-	err = helpers.UncompressEnvironment(comDir, dest)
+	err = helpers.DecompressEnvironment(comDir, dest)
 	if err != nil {
 		logger.Fatal(err)
 		return
@@ -76,7 +76,7 @@ func handlePull(values *cli.ActionArgs, args []string) {
 	err = os.Remove(encDir)
 	if err != nil {
 		logger.Fatal(err)
-		return 
+		return
 	}
 
 	err = os.Remove(comDir)

@@ -182,15 +182,18 @@ func (srv *server) handleGetRepo(w http.ResponseWriter, r *http.Request, params 
 	username := params.ByName("user")
 	repoName := params.ByName("repo")
 
-	key := username + "-" + repoName
-	contributorQuery := map[string]string{"contributors": user.Id}
-	ownerQuery := map[string]string{"owner_id": user.Id}
-	subQueries := []map[string]string{contributorQuery, ownerQuery}
-	query := map[string]interface{}{"$or": subQueries, "name": key}
+	key := repoName + "-" + username
+	query := bson.M{
+		"name": key,
+		"$or": []interface{}{
+			bson.M{"owner_id": user.Id},
+			bson.M{"contributors.user_id": user.Id, "contributors.role": "W"},
+		},
+	}
 
 	var repo models.Repo
 	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
-	if err != mongo.ErrNoDocuments {
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -208,12 +211,15 @@ func (srv *server) handlePull(w http.ResponseWriter, r *http.Request, params htt
 	username := params.ByName("user")
 	repoName := params.ByName("repo")
 
-	key := username + "-" + repoName
+	key := repoName + "-" + username
 
-	contributorQuery := map[string]string{"contributors": user.Id}
-	ownerQuery := map[string]string{"owner_id": user.Id}
-	subQueries := []map[string]string{contributorQuery, ownerQuery}
-	query := map[string]interface{}{"$or": subQueries, "name": key}
+	query := bson.M{
+		"name": key,
+		"$or": []interface{}{
+			bson.M{"owner_id": user.Id},
+			bson.M{"contributors.user_id": user.Id, "contributors.role": "W"},
+		},
+	}
 
 	var repo models.Repo
 	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
@@ -222,15 +228,9 @@ func (srv *server) handlePull(w http.ResponseWriter, r *http.Request, params htt
 		return
 	}
 
-	dir, err := os.UserHomeDir()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	repoPath := path.Join(srv.dir.uploads, key)
 
-	path := path.Join(dir, ".envi-server", "uploads", username)
-
-	srv.sendFile(w, path)
+	srv.sendFile(w, repoPath)
 }
 
 func (srv *server) handlePush(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -242,44 +242,60 @@ func (srv *server) handlePush(w http.ResponseWriter, r *http.Request, params htt
 
 	username := params.ByName("user")
 	repoName := params.ByName("repo")
-	key := username + "-" + repoName
+	key := repoName + "-" + username
 
-	contributorQuery := map[string]string{"contributors.owner_id": user.Id, "contributors.role": "W"}
-	ownerQuery := map[string]string{"owner_id": user.Id}
-	subQueries := []map[string]string{contributorQuery, ownerQuery}
-	query := map[string]interface{}{"$or": subQueries, "name": key}
+	query := bson.M{
+		"name": key,
+		"$or": []interface{}{
+			bson.M{"owner_id": user.Id},
+			bson.M{"contributors.user_id": user.Id, "contributors.role": "W"},
+		},
+	}
 
-	var repo models.Repo
-	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
-	if err != mongo.ErrNoDocuments {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	commitId := r.Header.Get("Next-Commit-Id")
+	treeId := r.Header.Get("Next-Tree-Id")
+
+	if len(commitId) == 0 || len(treeId) == 0 {
+		http.Error(w, "invalid commit-id or next-tree-id", http.StatusBadRequest)
 		return
 	}
 
-	if repo.TreeId != r.Header.Get("Repo-Tree-Id") {
-		http.Error(w, "invalid hearder: repo tree id is invalid and doesn't match head", http.StatusBadRequest)
+	var repo models.Repo
+	err = srv.db.Collection("repos").FindOne(srv.ctx, query).Decode(&repo)
+	if err == mongo.ErrNoDocuments {
+		http.Error(w, "repository not found", http.StatusBadRequest)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(repo.TreeId) != 0 && repo.TreeId != r.Header.Get("Repo-Tree-Id") {
+		http.Error(w, "invalid header: repo tree id is invalid and doesn't match head", http.StatusBadRequest)
 		return
 	}
 
 	secret := r.Header.Get("Repo-Secret")
-	if !crypto.VerifyPassword(secret, repo.Secret) {
+	if err = crypto.VerifyHash(secret, repo.Secret); err != nil {
 		http.Error(w, "invalid header: secret is invalid and doesn't match db content", http.StatusBadRequest)
 		return
 	}
 
-	content := r.MultipartForm.File["repo"][0]
-	if content == nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	file, err := content.Open()
+	err = r.ParseMultipartForm(32 << 20)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	local, err := os.OpenFile(repoName, os.O_CREATE|os.O_RDWR, 0655)
+	file, _, err := r.FormFile("repo")
+	if err != nil {
+		http.Error(w, "error retrieving repository from form", http.StatusBadRequest)
+		return
+	}
+
+	repoPath := path.Join(srv.dir.uploads, key)
+
+	local, err := os.OpenFile(repoPath, os.O_CREATE|os.O_RDWR, 0655)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -290,7 +306,24 @@ func (srv *server) handlePush(w http.ResponseWriter, r *http.Request, params htt
 		return
 	}
 
-	srv.send(w, http.StatusOK, map[string]bool{"success": true})
+	query = bson.M{
+		"name": key,
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"commit_id": commitId,
+			"tree_id":   treeId,
+		},
+	}
+
+	_, err = srv.db.Collection("repos").UpdateOne(srv.ctx, query, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	srv.send(w, http.StatusOK, "")
 }
 
 func (srv *server) handleShareRepo(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
