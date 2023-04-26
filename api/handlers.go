@@ -58,9 +58,6 @@ func (srv *server) handleLogin(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	fmt.Println(req.Username)
-	fmt.Println(req.Password)
-
 	var user models.User
 	err = srv.db.Collection("users").FindOne(srv.ctx, map[string]string{"username": req.Username}).Decode(&user)
 
@@ -70,8 +67,6 @@ func (srv *server) handleLogin(w http.ResponseWriter, r *http.Request, _ httprou
 	} else if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-
-	fmt.Println("I got here")
 
 	if !crypto.VerifyPassword(req.Password, user.Password) {
 		http.Error(w, "invalid username or password", http.StatusBadRequest)
@@ -90,7 +85,7 @@ func (srv *server) handleLogin(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	srv.send(w, 200, token)
+	srv.send(w, http.StatusOK, token)
 }
 
 func (srv *server) handleGetUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -125,10 +120,11 @@ func (srv *server) handleCreateRepo(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
-	repo := &models.Repo{
-		Name:         repoName,
-		Secret:       body.Secret,
-		Contributors: []models.Contributor{},
+	repo := map[string]interface{}{
+		"name":         repoName,
+		"secret":       body.Secret,
+		"owner_id":     user.Id,
+		"contributors": []models.Contributor{},
 	}
 
 	_, err = srv.db.Collection("repos").InsertOne(srv.ctx, repo)
@@ -137,7 +133,7 @@ func (srv *server) handleCreateRepo(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
-	srv.send(w, http.StatusOK, fmt.Sprintf("/repos/%s/%s", user.Username, body.Name))
+	srv.send(w, http.StatusCreated, fmt.Sprintf("/repos/%s/%s", user.Username, body.Name))
 }
 
 func (srv *server) handleGetRepos(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/mundanelizard/envi/internal/crypto"
 	"io"
 	"mime/multipart"
@@ -253,6 +254,9 @@ func (srv *Server) CreateNewRepo(repo string) (string, error) {
 	if res.StatusCode != 201 {
 		return "", errors.New(string(body))
 	}
+
+	fmt.Println("Repository secret [Save It]: ", secret)
+	fmt.Println("Repository address: ", repo)
 
 	return string(body), nil
 }

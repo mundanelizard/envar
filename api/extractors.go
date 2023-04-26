@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"io"
 	"net/http"
 
@@ -101,15 +102,20 @@ func (srv *server) extractUserFromHeaderToken(header http.Header) (*models.User,
 	}
 
 	var secret models.Secret
-	query := map[string]string{"token": token}
+	query := map[string]interface{}{"token": token}
 	err := srv.db.Collection("secrets").FindOne(srv.ctx, query).Decode(&secret)
 	if err != nil {
 		srv.logger.Warn(err.Error())
 		return nil, ErrUnauthorised
 	}
 
+	objId, err := primitive.ObjectIDFromHex(secret.OwnerId)
+	if err != nil {
+		return nil, err
+	}
+
 	var user models.User
-	query = map[string]string{"_id": secret.OwnerId}
+	query = map[string]interface{}{"_id": objId}
 	err = srv.db.Collection("users").FindOne(srv.ctx, query).Decode(&user)
 	if err != nil {
 		srv.logger.Warn(err.Error())

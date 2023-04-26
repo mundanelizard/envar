@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/mundanelizard/envi/internal/lockfile"
 	"github.com/mundanelizard/envi/pkg/cli"
@@ -35,7 +36,7 @@ func handleInit(_ *cli.ActionArgs, args []string) {
 
 	enviDir := path.Join(cwd, ".envi")
 
-	// checking if an envi repository has been initialsed
+	// checking if an envi repository has been initialised
 	stat, err := os.Stat(enviDir)
 	if err == nil && stat.IsDir() {
 		fmt.Println("Reinitialised current repository")
@@ -49,12 +50,11 @@ func handleInit(_ *cli.ActionArgs, args []string) {
 	}
 
 	// creating a repository on the server and saving the remote
-	repoName := path.Base(cwd)
+	repoName := filepath.Base(cwd)
 	endpoint, err := srv.CreateNewRepo(repoName)
 	if err != nil {
-		_, err = logger.Error(err)
-		err = os.RemoveAll(enviDir)
-		logger.Fatal(err)
+		_, _ = logger.Error(err)
+		_ = os.RemoveAll(enviDir)
 		return
 	}
 
